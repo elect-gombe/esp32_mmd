@@ -6,17 +6,24 @@
 #include "vector3.hpp"
 #include "fvector2.hpp"
 #include "fvector4.hpp"
-typedef struct{
-  const uint16_t *tx;
-  vector2 size;
-} texture_t;
 
+//テクスチャ型
+struct texture_t{
+  const uint16_t *tx;
+  vector2 size;//未実装
+};
+
+
+//テクスチャのついた三角形描画はtriangleを継承しますが、ほとんどオーバーライドしています。速度の問題とかあるんで
 class texturetriangle:public triangle{
 private:
+  //テクスチャデータ
   const uint16_t *tx;
-  vector2 txsize;
+  vector2 txsize;//未実装
+  //テクスチャ内座標
   fvector2 pdt[2];
   fvector2 uvdelta[2][2];
+  //w値の補間用
   float pdw[2];
   float wdelta[2][2];
 public:

@@ -16,7 +16,6 @@
 #include "soc/gpio_struct.h"
 #include "driver/gpio.h"
 
-
 spi_device_handle_t spi;
 
 /*
@@ -42,6 +41,8 @@ spi_device_handle_t spi;
 #define PIN_NUM_RST  18
 #define PIN_NUM_BCKL 5
 
+
+int main3d();
 
 /*
   The ILI9341 needs a bunch of command/argument values to be initialized. They are stored in this struct.
@@ -300,8 +301,6 @@ static void display_pretty_colors(spi_device_handle_t spi)
     }
   }
 }
-
-int main3d();
 
 void app_main()
 {

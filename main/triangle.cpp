@@ -46,6 +46,7 @@ int triangle::draw(float *zlinebuf,graphiclib &g){
 
   {
     int c=sx+yno+ymin+frame;
+    float smoke;
     for(int i=sx;i<ex;i++){
       ;//plot
       //      printf("%6.1f ",zv/65536.);

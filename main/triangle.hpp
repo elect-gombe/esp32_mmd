@@ -15,8 +15,6 @@ public:
   float pdz[2];
   int yno;
   int phase;
-
-  float smoke;
   // int z_val;
   // int dxdz;
   // int dydz;
