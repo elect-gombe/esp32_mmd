@@ -101,7 +101,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
   }
  distnext:
   //三角型の真ん中のところに達したか？
-  if(yno+ymin >= p[1].y){
+  if(yno+ymin >= ymiddle){
     //増加量の更新
     phase=1;
   }
@@ -122,6 +122,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
 
 #warning todo add comment
 int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t *tex,const fvector2 puv[3]){
+  fvector4 p[3];
   float delta_top_mid;
   float delta_top_btm;
   float delta_mid_btm;
@@ -140,7 +141,6 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   fvector2 uv[3];
 
   tx = tex->tx;
-  txsize = tex->size;
   yno=0;
   phase = 0;
   this->col = col;
@@ -183,8 +183,8 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   }
 
   this->col = col;
-  ymin = cymin();
-  ymax = cymax();
+  ymin = p[0].y;
+  ymax = p[2].y;
   if(ymax>=window_height)ymax=window_height-1;
 
   top_btm_x = p[0].x;
@@ -344,6 +344,7 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
     uvdelta[0][0]=uvdelta_top_btm;
     uvdelta[0][1]=uvdelta_mid_btm;
   }
+  ymiddle = p[1].y;
   
   return 0;
 }

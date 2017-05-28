@@ -10,9 +10,9 @@
 #include "lcd.h"
 
 extern "C"{
-void toggleLED(void);
-void send_line(int ypos, uint16_t *line) ;
-int main3d();
+  void toggleLED(void);
+  void send_line(int ypos, uint16_t *line) ;
+  int main3d();
 }
 
 #include "poly.h"
@@ -48,9 +48,12 @@ fvector4 obj_transed[POINTNUM];
 fvector4 poly_transed[POINTNUM];
 
 float zlinebuf[window_width];
-texturetriangle t[POLYNUM];
 
+//ソート用のデータの作成
+int draworder[POLYNUM];
+float zdata[POLYNUM];
 int main3d(void){
+  texturetriangle *t = new texturetriangle[POLYNUM];
   Matrix4 m;
   Matrix4 projection;
   Matrix4 obj;
@@ -60,14 +63,14 @@ int main3d(void){
 
   fvector3 viewdir;
   fvector3 veye;
-  float dist = 2;
+  float dist = 5.f;
   vector2 mouse;
   vector2 pmouse;
   vector2 np;
   vector2 pnp;
   bool clicking = false;
   
-  veye = fvector3(0,0,-2.5f);
+  veye = fvector3(0,0,-15.5f);
   obj = obj*magnify(1);
   while(1){
     np.x+=10;    //camera rotation
@@ -121,11 +124,8 @@ int main3d(void){
       }
     }
     
-    //ソート用のデータの作成
-    int draworder[POLYNUM];
-    float zdata[POLYNUM];
     for(int i=0;i<tnum;i++){
-      zdata[i] = t[i].p[1].z+t[i].p[0].z+t[i].p[2].z;
+      //      zdata[i] = t[i].p[1].z+t[i].p[0].z+t[i].p[2].z;
       draworder[i] = i;
     }
 
@@ -139,12 +139,12 @@ int main3d(void){
       if (zdata[i-1] > zdata[i]) {
         j = i;
         do {
-	  zdata[j] = zdata[j-1];
-	  draworder[j] = draworder[j-1];
-	  j--;
+    	  zdata[j] = zdata[j-1];
+    	  draworder[j] = draworder[j-1];
+    	  j--;
         } while (j > 0 && zdata[j - 1] > tmpdata);
         zdata[j] = tmpdata;
-	draworder[j] = tmpsubdata;
+    	draworder[j] = tmpsubdata;
       }
     }
     

@@ -225,7 +225,7 @@ void send_line(int ypos, uint16_t *line)
   //function is finished because the SPI driver needs access to it even while we're already calculating the next line.
   static spi_transaction_t trans[6];
   static int transed;
-
+  
   if(transed!=0)send_line_finish();
   transed = 1;
   //In theory, it's better to initialize trans and data only once and hang on to the initialized

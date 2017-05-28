@@ -64,7 +64,7 @@ int triangle::draw(float *zlinebuf,graphiclib &g){
     //    puts("");
   }
  distnext:
-  if(yno+ymin >= p[1].y){
+  if(yno+ymin >= ymiddle){
     phase=1;
   }
   yno++;
@@ -85,6 +85,7 @@ int triangle::draw(float *zlinebuf,graphiclib &g){
 }
   
 int triangle::triangle_set(fvector4 px[3],float col){
+  fvector4 p[3];
   float delta_top_mid;
   float delta_top_btm;
   float delta_mid_btm;
@@ -178,8 +179,11 @@ int triangle::triangle_set(fvector4 px[3],float col){
   // }
 
   this->col = col;
+  ymin = p[0].y;
+  ymax = p[2].y;
   ymin = cymin();
   ymax = cymax();
+
   if(ymax>=window_height)ymax=window_height-1;
 
   top_btm_x = p[0].x;
@@ -293,15 +297,16 @@ int triangle::triangle_set(fvector4 px[3],float col){
     zdelta[0][0]=zdelta_top_btm;
     zdelta[0][1]=zdelta_mid_btm;
   }
+  ymiddle = p[1].y;
   // printf("start @%f @%f\n",pdx[0]/65536.,pdx[1]/65536.);
   // printf("delta %f %f %f %f\n",delta[0][0]/65536.,delta[0][1]/65536.,delta[1][0]/65536.,delta[1][1]/6
   return 0;
 }
 
 int triangle::cymin(){
-  return p[0].y;
+  return ymin;
 }
 
 int triangle::cymax(){
-  return p[2].y;
+  return ymax;
 }

@@ -19,7 +19,6 @@ class texturetriangle:public triangle{
 private:
   //テクスチャデータ
   const uint16_t *tx;
-  vector2 txsize;//未実装
   //テクスチャ内座標
   fvector2 pdt[2];
   fvector2 uvdelta[2][2];
@@ -30,6 +29,5 @@ public:
   int triangle_set(fvector4 px[3],float c,const texture_t *t,const fvector2 puv[3]);
   int draw(float *zlinebuf,uint16_t *buff);
 };
-
 
 #endif
