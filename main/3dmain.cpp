@@ -53,10 +53,14 @@ float zlinebuf[window_width];
 int draworder[POLYNUM];
 float zdata[POLYNUM];
 int main3d(void){
-  texturetriangle *t = new texturetriangle[POLYNUM];
+  texturetriangle *t[POLYNUM];
   Matrix4 m;
   Matrix4 projection;
   Matrix4 obj;
+
+  for(int i=0;i<POLYNUM;i++){
+    t[i] = new texturetriangle;
+  }
 
   //透視投影行列
   projection=loadPerspective(0.25f,float(window_height)/window_width,0.0001f,3.f,0,0)*projection;
@@ -120,7 +124,7 @@ int main3d(void){
       //光量の計算
       float light = abs(loadPower(fvector3(),veye,vo))*0.9f+0.1f;
       if(light+1){
-	if(t[tnum++].triangle_set(v,light,&tex,puv)==-1)tnum--;
+	if(t[tnum++]->triangle_set(v,light,&tex,puv)==-1)tnum--;
       }
     }
     
@@ -155,11 +159,12 @@ int main3d(void){
 	drawbuff[y&1][i]=0x1000;
       }
       for(int i=0;i<tnum;i++){
-	if(t[draworder[i]].ymin < y&&t[draworder[i]].ymax >= y){
-	  t[draworder[i]].draw(zlinebuf,drawbuff[y&1]);
+	if(t[draworder[i]]->ymin < y&&t[draworder[i]]->ymax >= y){
+	  t[draworder[i]]->draw(zlinebuf,drawbuff[y&1]);
 	}
       }
       send_line(y,drawbuff[y&1]);
     }
   }
+  delete[] t;
 }
