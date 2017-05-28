@@ -61,10 +61,7 @@ phy_init.o: /home/gombe/bin/esp/esp-idf/components/esp32/./phy_init.c \
  /home/gombe/bin/esp/esp-idf/components/log/include/esp_log.h \
  /home/gombe/bin/esp/esp-idf/examples/peripherals/lcdtest/build/include/sdkconfig.h \
  /home/gombe/bin/esp/esp-idf/components/nvs_flash/include/nvs.h \
- /home/gombe/bin/esp/esp-idf/components/nvs_flash/include/nvs_flash.h \
- /home/gombe/bin/esp/esp-idf/components/esp32/./phy.h \
- /home/gombe/bin/esp/esp-idf/components/esp32/./phy_init_data.h \
- /home/gombe/bin/esp/esp-idf/components/esp32/include/esp_coexist.h
+ /home/gombe/bin/esp/esp-idf/components/nvs_flash/include/nvs_flash.h
 
 /home/gombe/bin/esp/esp-idf/components/newlib/include/stdlib.h:
 
@@ -191,9 +188,3 @@ phy_init.o: /home/gombe/bin/esp/esp-idf/components/esp32/./phy_init.c \
 /home/gombe/bin/esp/esp-idf/components/nvs_flash/include/nvs.h:
 
 /home/gombe/bin/esp/esp-idf/components/nvs_flash/include/nvs_flash.h:
-
-/home/gombe/bin/esp/esp-idf/components/esp32/./phy.h:
-
-/home/gombe/bin/esp/esp-idf/components/esp32/./phy_init_data.h:
-
-/home/gombe/bin/esp/esp-idf/components/esp32/include/esp_coexist.h:
