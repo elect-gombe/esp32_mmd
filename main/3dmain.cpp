@@ -42,21 +42,22 @@ float loadPower(const fvector3 &light_pos,const fvector3 &light_n,const fvector4
 
 const int SIZE_TEX = 256;
 
-uint16_t drawbuff[2][window_width];
-
 fvector4 obj_transed[POINTNUM];
 fvector4 poly_transed[POINTNUM];
 
-float zlinebuf[window_width];
-
-//ソート用のデータの作成
-int draworder[POLYNUM];
-float zdata[POLYNUM];
+// //ソート用のデータの作成
+// int draworder[POLYNUM];
+// float zdata[POLYNUM];
 int main3d(void){
-  texturetriangle *t[POLYNUM];
   Matrix4 m;
   Matrix4 projection;
   Matrix4 obj;
+
+  uint16_t drawbuff[2][window_width];
+
+  float zlinebuf[window_width];
+
+  texturetriangle *t[POLYNUM];
 
   for(int i=0;i<POLYNUM;i++){
     t[i] = new texturetriangle;
@@ -77,11 +78,11 @@ int main3d(void){
   veye = fvector3(0,0,-15.5f);
   obj = obj*magnify(1);
   while(1){
-    np.x+=10;    //camera rotation
+    np.x+=5;    //camera rotation
     //視点計算
     veye = -fvector3(cos(np.x/300.f*3.14159265f)*cos(np.y/300.*3.14159265f),sin(np.y/300.*3.14159265f),sin(np.x/300.*3.14159265f)*cos(np.y/300.*3.14159265f));
     //透視投影行列とカメラ行列の合成
-    m=projection*lookat(fvector3(0,0,0),veye*dist);    
+    m=projection*lookat(fvector3(0,0,0),veye*dist)*translation(fvector3(0,0,-0.7));
     
     fvector4 vo[3];
     fvector4 v[3];
@@ -129,28 +130,28 @@ int main3d(void){
     }
     
     for(int i=0;i<tnum;i++){
-      //      zdata[i] = t[i].p[1].z+t[i].p[0].z+t[i].p[2].z;
-      draworder[i] = i;
+      // zdata[i] = 65536-t[i]->pdz[0];
+      // draworder[i] = i;
     }
 
-    float tmpdata;
-    int tmpsubdata;
-    int j;
-    //Z順にソート
-    for (int i = 1; i < tnum; i++) {
-      tmpdata = zdata[i];
-      tmpsubdata = draworder[i];
-      if (zdata[i-1] > zdata[i]) {
-        j = i;
-        do {
-    	  zdata[j] = zdata[j-1];
-    	  draworder[j] = draworder[j-1];
-    	  j--;
-        } while (j > 0 && zdata[j - 1] > tmpdata);
-        zdata[j] = tmpdata;
-    	draworder[j] = tmpsubdata;
-      }
-    }
+    // float tmpdata;
+    // int tmpsubdata;
+    // int j;
+    // //Z順にソート
+    // for (int i = 1; i < tnum; i++) {
+    //   tmpdata = zdata[i];
+    //   tmpsubdata = draworder[i];
+    //   if (zdata[i-1] > zdata[i]) {
+    //     j = i;
+    //     do {
+    // 	  zdata[j] = zdata[j-1];
+    // 	  draworder[j] = draworder[j-1];
+    // 	  j--;
+    //     } while (j > 0 && zdata[j - 1] > tmpdata);
+    //     zdata[j] = tmpdata;
+    // 	draworder[j] = tmpsubdata;
+    //   }
+    // }
     
     //ラインごとに描画しLCDに転送
     for(int y=0;y<window_height;y++){
@@ -159,12 +160,14 @@ int main3d(void){
 	drawbuff[y&1][i]=0x1000;
       }
       for(int i=0;i<tnum;i++){
-	if(t[draworder[i]]->ymin < y&&t[draworder[i]]->ymax >= y){
-	  t[draworder[i]]->draw(zlinebuf,drawbuff[y&1]);
+	if(t[i]->ymin < y&&t[i]->ymax >= y){
+	  t[i]->draw(zlinebuf,drawbuff[y&1]);
 	}
       }
       send_line(y,drawbuff[y&1]);
     }
   }
-  delete[] t;
+  for(int i=0;i<POLYNUM;i++){
+    delete[] t[i];
+  }
 }
