@@ -56,7 +56,7 @@ int main3d(void){
   uint16_t drawbuff[2][window_width];
 
   float zlinebuf[window_width];
-
+  printf("texture:%u\n",sizeof(texturetriangle));
   texturetriangle *t[POLYNUM];
 
   for(int i=0;i<POLYNUM;i++){
@@ -68,7 +68,7 @@ int main3d(void){
 
   fvector3 viewdir;
   fvector3 veye;
-  float dist = 5.f;
+  float dist = 3.f;
   vector2 mouse;
   vector2 pmouse;
   vector2 np;
@@ -78,8 +78,13 @@ int main3d(void){
   veye = fvector3(0,0,-15.5f);
   obj = obj*magnify(1);
   while(1){
-    np.x+=5;    //camera rotation
+    {
+      static int hogec=0;
+      printf("%d\n",hogec++);
+    }
+    np.x+=3;    //camera rotation
     //視点計算
+    dist = 3.f + 1.8f*cosf(np.x/150.f*3.14159265358979324);
     veye = -fvector3(cos(np.x/300.f*3.14159265f)*cos(np.y/300.*3.14159265f),sin(np.y/300.*3.14159265f),sin(np.x/300.*3.14159265f)*cos(np.y/300.*3.14159265f));
     //透視投影行列とカメラ行列の合成
     m=projection*lookat(fvector3(0,0,0),veye*dist)*translation(fvector3(0,0,-0.7));

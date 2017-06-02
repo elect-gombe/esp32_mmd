@@ -205,9 +205,9 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
     top_btm_uv = uv[0];
   }
 
-  if(ymin>=window_height-1) return -1; 
-  if(ymax <= 0) return -1;
-  if (ymin < 0) {
+  if(p[0].y>=window_height-1) return -1; 
+  if(p[2].y <= 0) return -1;
+  if (p[0].y < 0) {
     ymin = 0;
     if (p[1].y >= 0) {
       if(p[0].y != p[1].y){
@@ -237,7 +237,6 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
       top_btm_uv = (uv[2]-uv[0]) * d_y + uv[2];
     }
   }
-  if(ymin < 0)ymin=0;
 
   float zdelta_top_mid,wdelta_top_mid;
   float zdelta_top_btm,wdelta_top_btm;
@@ -245,7 +244,6 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   fvector2 uvdelta_top_mid;
   fvector2 uvdelta_top_btm;
   fvector2 uvdelta_mid_btm;
-
 
   if(p[2].y!=p[1].y){
     float iy;
