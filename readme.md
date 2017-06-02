@@ -1,5 +1,8 @@
 # MMD with ESP32
 ## MMDモデルの表示
+
+<img src="http://i.imgur.com/qks27xH.jpg" alt="サンプル" width="200">
+
 Mはげさんのソースコードから拝借して表示しました。
 ## 回路
 ST7735S(160x128)を使います。Aitendoとかにあったのですが今は知りません。
