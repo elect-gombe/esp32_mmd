@@ -63,7 +63,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
   //描画処理
   {
     int shift = 8;
-    int mask = (1<<shift)-1;
+    int mask = 0xFF;
     int cr,cg,cb;
     float bri;
     float smoke;
@@ -77,24 +77,29 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
        if(zv > 0){
 	 //テクスチャ座標の算出
 	 cuv = uv *(1.f/wv);
+	 //ｚデータの書き込み
+	 zlinebuf[i] = zv;
 	 uint16_t dtx;
+	 dtx = 0xFFFF;
 	 //テクスチャの取得
-	 dtx = tx[65535-((int(cuv.x)&mask)+((int(cuv.y)&mask)<<shift))];
+	 dtx = tx[65535-
+		  (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
 	 cr = (dtx) >> 11;
 	 cg = ((dtx) >> 5)&0x3F;
 	 cb = (dtx) &0x1F;
-	 //遠くのに対して黒く補正する。
-	 smoke = min(1.f-zv,0.2f)*5.f;
-	 bri = smoke*col;
-	 //色の計算
+	 // //遠くのに対して黒く補正する。
+	 // smoke = min(1.f-zv,0.2f)*5.f;
+	 bri = col;
+	 // //色の計算
 	 cr=(cr*bri);
 	 cg=(cg*bri);
 	 cb=(cb*bri);
 	 //色の書き込み
-	 ((uint8_t*)buff)[i*2] = (cr|(cg<<5)|(cb<<11))>>8;
-	 ((uint8_t*)buff)[i*2+1] = (cr|(cg<<5)|(cb<<11));
-	 //ｚデータの書き込み
-	 zlinebuf[i] = zv;
+	 ((uint8_t*)buff)[i*2] = ((cg<<5)|(cb<<11))>>8;
+	 ((uint8_t*)buff)[i*2+1] = (cr|(cg<<5));
+
+	 // ((uint8_t*)buff)[i*2] = 0xFF;
+	 // ((uint8_t*)buff)[i*2+1] = 0xFF;
        }
       }
     }

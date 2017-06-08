@@ -8,11 +8,17 @@
 #include "triangle.hpp"
 #include "texturepoly.hpp"
 #include "lcd.h"
+#include <algorithm>
+
+#define ZSORT 0
 
 extern "C"{
   void toggleLED(void);
+  void send_first(int ypos) ;
   void send_line(int ypos, uint16_t *line) ;
+  void send_aline_finish();
   int main3d();
+  void esp_task_wdt_feed();
 }
 
 #include "poly.h"
@@ -22,6 +28,29 @@ extern "C"{
 #define WIRENUM int(sizeof(wireframe)/sizeof(wireframe[0]))
 
 vector3 pv[12][3];
+
+//-----------------------------------------------------------------------------
+// Read CCOUNT register.
+//-----------------------------------------------------------------------------
+static __inline__ uint32_t xos_get_ccount(void)
+{
+#if XCHAL_HAVE_CCOUNT
+
+#if defined (__XCC__)
+  return XT_RSR_CCOUNT();
+#else
+  uint32_t ccount;
+
+  __asm__ __volatile__ ( "rsr     %0, ccount" : "=a" (ccount) );
+  return ccount;
+#endif
+
+#else
+
+  return 0;
+
+#endif
+}
 
 float loadPower(const fvector3 &light_pos,const fvector3 &light_n,const fvector4 obj[3]){
   fvector3 light_obj;
@@ -45,9 +74,17 @@ const int SIZE_TEX = 256;
 fvector4 obj_transed[POINTNUM];
 fvector4 poly_transed[POINTNUM];
 
-// //ソート用のデータの作成
-// int draworder[POLYNUM];
-// float zdata[POLYNUM];
+
+#if ZSORT
+//ソート用のデータの作成
+struct draworder_t{
+  int draworder;
+  int zdata;
+};
+draworder_t draworder[POLYNUM];
+#endif
+
+
 int main3d(void){
   Matrix4 m;
   Matrix4 projection;
@@ -56,10 +93,9 @@ int main3d(void){
   uint16_t drawbuff[2][window_width];
 
   float zlinebuf[window_width];
-  printf("texture:%u\n",sizeof(texturetriangle));
   texturetriangle *t[POLYNUM];
 
-  for(int i=0;i<POLYNUM;i++){
+  for(int i=0;i<POLYNUM*3/4;i++){
     t[i] = new texturetriangle;
   }
 
@@ -71,29 +107,48 @@ int main3d(void){
   float dist = 3.f;
   vector2 mouse;
   vector2 pmouse;
-  vector2 np;
+  fvector2 np = fvector2(440.f,0);
   vector2 pnp;
   bool clicking = false;
-  
+  float average = 20.f;
+    
+  fvector4 vo[3];
+  fvector4 v[3];
+  fvector3 n;
+  int tnum=0;
+
+  int hogec=0;
+  uint32_t prev = 0;  
+
   veye = fvector3(0,0,-15.5f);
-  obj = obj*magnify(1);
+  obj = obj*magnify(2);
+  send_first(0);
   while(1){
     {
-      static int hogec=0;
-      printf("%d\n",hogec++);
+      esp_task_wdt_feed();      // if(hogec!=0)
+      // 	send_aline_finish();
+      if(1){
+	average = average *0.995+0.005*240000000.f/(xos_get_ccount()-prev);
+	printf("%f %.2f fps/%.2f :%dface\n",np.x,240000000.f/(xos_get_ccount()-prev),average,tnum);
+	prev = xos_get_ccount();
+      }
+      tnum=0;
+      hogec++;
     }
-    np.x+=3;    //camera rotation
+    np.x+=2.f;    //camera rotation
     //視点計算
-    dist = 3.f + 1.8f*cosf(np.x/150.f*3.14159265358979324);
-    veye = -fvector3(cos(np.x/300.f*3.14159265f)*cos(np.y/300.*3.14159265f),sin(np.y/300.*3.14159265f),sin(np.x/300.*3.14159265f)*cos(np.y/300.*3.14159265f));
+#if MODEL == 1
+    dist = 3.f + 1.4f*cosf(np.x/150.f*3.14159265358979324f);
+#else
+    dist = 5.f + 2.5f*cosf(np.x/150.f*3.14159265358979324f);
+#endif
+    veye = -fvector3(cosf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f),sinf(np.y/300.f*3.14159265f),sinf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f));
     //透視投影行列とカメラ行列の合成
-    m=projection*lookat(fvector3(0,0,0),veye*dist)*translation(fvector3(0,0,-0.7));
-    
-    fvector4 vo[3];
-    fvector4 v[3];
-    fvector3 n;
-    int tnum=0;
-
+#if MODEL <= 3
+    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj;//*translation(fvector3(0,0,-0.7));
+#else
+    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj*translation(fvector3(0,0,-0.7));
+#endif
     //頂点データを変換
     for(int j=0;j<POINTNUM;j++){
       obj_transed[j] = fvector4(pointvec[j].x,pointvec[j].y,pointvec[j].z);
@@ -108,10 +163,13 @@ int main3d(void){
       }
 
       //簡易1次クリッピング
+      if(v[0].w < 0)continue;
+      if(v[2].w < 0)continue;
+      if(v[1].w < 0)continue;
       if(!(
-	   !((abs(v[0].x) > 1.f)||(abs(v[0].y) > 1.f)||(abs(v[0].z) > 1.f))||
-	   !((abs(v[1].x) > 1.f)||(abs(v[1].y) > 1.f)||(abs(v[1].z) > 1.f))||
-	   !((abs(v[2].x) > 1.f)||(abs(v[2].y) > 1.f)||(abs(v[2].z) > 1.f))))
+	   !((abs(v[0].x) > 1.f)||(abs(v[0].y) > 1.f)||(abs(v[0].z) < 0.f))||
+	   !((abs(v[1].x) > 1.f)||(abs(v[1].y) > 1.f)||(abs(v[1].z) < 0.f))||
+	   !((abs(v[2].x) > 1.f)||(abs(v[2].y) > 1.f)||(abs(v[2].z) < 0.f))))
 	continue;
       //クリップ座標系からディスプレイ座標系の変換
       v[0].x=v[0].x*window_width+window_width/2;v[0].y=v[0].y*window_height+window_height/2;
@@ -128,45 +186,34 @@ int main3d(void){
 	puv[j].y = (point_uv[polyvec[i][j]].y)*SIZE_TEX;
       }
       //光量の計算
-      float light = abs(loadPower(fvector3(),veye,vo))*0.9f+0.1f;
-      if(light+1){
+      float light = loadPower(fvector3(),veye,vo);
+      if(light>0){
 	if(t[tnum++]->triangle_set(v,light,&tex,puv)==-1)tnum--;
       }
     }
     
+#if ZSORT
     for(int i=0;i<tnum;i++){
-      // zdata[i] = 65536-t[i]->pdz[0];
-      // draworder[i] = i;
+      draworder[i].draworder = i;
+      draworder[i].zdata = t[i]->pdz[0]*65536.;
     }
-
-    // float tmpdata;
-    // int tmpsubdata;
-    // int j;
-    // //Z順にソート
-    // for (int i = 1; i < tnum; i++) {
-    //   tmpdata = zdata[i];
-    //   tmpsubdata = draworder[i];
-    //   if (zdata[i-1] > zdata[i]) {
-    //     j = i;
-    //     do {
-    // 	  zdata[j] = zdata[j-1];
-    // 	  draworder[j] = draworder[j-1];
-    // 	  j--;
-    //     } while (j > 0 && zdata[j - 1] > tmpdata);
-    //     zdata[j] = tmpdata;
-    // 	draworder[j] = tmpsubdata;
-    //   }
-    // }
+    std::sort(draworder,draworder+tnum, [](draworder_t& x, draworder_t& y){return x.zdata < y.zdata;});
     
+#endif
     //ラインごとに描画しLCDに転送
     for(int y=0;y<window_height;y++){
       for(int i=0;i<window_width;i++){
 	zlinebuf[i]=1.f;
-	drawbuff[y&1][i]=0x1000;
+	drawbuff[y&1][i]=0x0020;/*RGB*/
       }
       for(int i=0;i<tnum;i++){
+#if ZSORT
+	if(t[draworder[i].draworder]->ymin < y&&t[draworder[i].draworder]->ymax >= y){
+	  t[draworder[i].draworder]->draw(zlinebuf,drawbuff[y&1]);
+#else
 	if(t[i]->ymin < y&&t[i]->ymax >= y){
 	  t[i]->draw(zlinebuf,drawbuff[y&1]);
+#endif
 	}
       }
       send_line(y,drawbuff[y&1]);

@@ -206,7 +206,19 @@ void send_line_finish(void)
   spi_transaction_t *rtrans;
   esp_err_t ret;
   //Wait for all 6 transactions to be done and get back the results.
-  for (int x=0; x<6; x++) {
+  for (int x=0; x<5; x++) {
+    ret=spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
+    assert(ret==ESP_OK);
+    //We could inspect rtrans now if we received any info back. The LCD is treated as write-only, though.
+  }
+}
+
+void send_aline_finish(void) 
+{
+  spi_transaction_t *rtrans;
+  esp_err_t ret;
+  //Wait for all 6 transactions to be done and get back the results.
+  for (int x=0; x<1; x++) {
     ret=spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
     assert(ret==ESP_OK);
     //We could inspect rtrans now if we received any info back. The LCD is treated as write-only, though.
@@ -217,7 +229,7 @@ void send_line_finish(void)
 //before sending the line data itself; a total of 6 transactions. (We can't put all of this in just one transaction
 //because the D/C line needs to be toggled in the middle.)
 //This routine queues these commands up so they get sent as quickly as possible.
-void send_line(int ypos, uint16_t *line) 
+void send_first(int ypos) 
 {
   esp_err_t ret;
   int x;
@@ -226,8 +238,6 @@ void send_line(int ypos, uint16_t *line)
   static spi_transaction_t trans[6];
   static int transed;
   
-  if(transed!=0)send_line_finish();
-  transed = 1;
   //In theory, it's better to initialize trans and data only once and hang on to the initialized
   //variables. We allocate them on the stack, so we need to re-init them each call.
   for (x=0; x<6; x++) {
@@ -250,15 +260,59 @@ void send_line(int ypos, uint16_t *line)
   trans[2].tx_data[0]=0x2B;           //Page address set
   trans[3].tx_data[0]=(ypos+2)>>8;        //Start page high
   trans[3].tx_data[1]=(ypos+2)&0xff;      //start page low
-  trans[3].tx_data[2]=(ypos+3)>>8;    //end page high
-  trans[3].tx_data[3]=(ypos+3)&0xff;  //end page low
+  trans[3].tx_data[2]=(129)>>8;    //end page high
+  trans[3].tx_data[3]=(129)&0xff;  //end page low
   trans[4].tx_data[0]=0x2C;           //memory write
-  trans[5].tx_buffer=line;            //finally send the line data
-  trans[5].length=160*2*8;            //Data length, in bits
-  trans[5].flags=0; //undo SPI_TRANS_USE_TXDATA flag
 
   //Queue all transactions.
+  for (x=0; x<5; x++) {
+    ret=spi_device_queue_trans(spi, &trans[x], portMAX_DELAY);
+    assert(ret==ESP_OK);
+  }
+
+  //When we are here, the SPI driver is busy (in the background) getting the transactions sent. That happens
+  //mostly using DMA, so the CPU doesn't have much to do here. We're not going to wait for the transaction to
+  //finish because we may as well spend the time calculating the next line. When that is done, we can call
+  //send_line_finish, which will wait for the transfers to be done and check their status.
+  send_line_finish();
+}
+
+//To send a line we have to send a command, 2 data bytes, another command, 2 more data bytes and another command
+//before sending the line data itself; a total of 6 transactions. (We can't put all of this in just one transaction
+//because the D/C line needs to be toggled in the middle.)
+//This routine queues these commands up so they get sent as quickly as possible.
+void send_line(int ypos, uint16_t *line) 
+{
+  esp_err_t ret;
+  int x;
+  //Transaction descriptors. Declared static so they're not allocated on the stack; we need this memory even when this
+  //function is finished because the SPI driver needs access to it even while we're already calculating the next line.
+  static spi_transaction_t trans[6];
+  static int transed;
+  
+  if(transed!=0)send_aline_finish();
+  transed = 1;
+  //In theory, it's better to initialize trans and data only once and hang on to the initialized
+  //variables. We allocate them on the stack, so we need to re-init them each call.
   for (x=0; x<6; x++) {
+    memset(&trans[x], 0, sizeof(spi_transaction_t));
+    if ((x&1)==0) {
+      //Even transfers are commands
+      trans[x].length=8;
+      trans[x].user=(void*)1;
+    } else {
+      //Odd transfers are data
+      trans[x].length=8*4;
+      trans[x].user=(void*)1;
+    }
+    trans[x].flags=SPI_TRANS_USE_TXDATA;
+  }
+  trans[0].tx_buffer=line;            //finally send the line data
+  trans[0].length=160*2*8;            //Data length, in bits
+  trans[0].flags=0; //undo SPI_TRANS_USE_TXDATA flag
+
+  //Queue all transactions.
+  for (x=0; x<1; x++) {
     ret=spi_device_queue_trans(spi, &trans[x], portMAX_DELAY);
     assert(ret==ESP_OK);
   }
@@ -329,5 +383,6 @@ void app_main()
   ili_init(spi);
   //Go do nice stuff.
   /* display_pretty_colors(spi); */
+  uint16_t hoge[160];
   main3d();
 }
