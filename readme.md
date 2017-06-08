@@ -1,8 +1,7 @@
-# MMD with ESP32
+x# MMD with ESP32
 ## MMDモデルの表示 MMD model display test
 
-<img src="http://i.imgur.com/qks27xH.jpg" alt="サンプル" width="200">
-
+<img src="http://i.imgur.com/9LDjwK9.jpg" alt="サンプル" width="300">
 Mはげさんのソースコードから拝借して表示しました。
 
 # How to
@@ -28,5 +27,8 @@ for ST7735S (160x128)
 ## memo
 このシステムはラインスキャン法を使っています。高速かつ少ないメモリで処理可能で、一ライン分のみのｚバッファを使っているため解像度を上げることも可能です。
 ただしパフォーマンスは低下します。
+
+using scanline rendering. only one line z-buffer, fast drawing and just few memory. So you can increase resolution and get more worse performance! :) 
+
 
 http://gombe.azurewebsites.net/2017/05/14/%e3%83%9e%e3%82%a4%e3%82%b3%e3%83%b3%e3%81%a73d%e8%a1%a8%e7%a4%ba%e5%9b%b3%e8%a7%a3/
