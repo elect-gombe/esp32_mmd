@@ -27,7 +27,7 @@ private:
   float wdelta[2][2];
 public:
   int triangle_set(fvector4 px[3],float c,const texture_t *t,const fvector2 puv[3]);
-  int draw(float *zlinebuf,uint16_t *buff);
+  int draw(float *zlinebuf,uint16_t *buff,int dry);
   static bool LessZ(const texturetriangle& rLeft, const texturetriangle& rRight) ;
 };
 

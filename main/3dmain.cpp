@@ -9,6 +9,7 @@
 #include "texturepoly.hpp"
 #include "lcd.h"
 #include <algorithm>
+#include "3dconfig.hpp"
 
 #define ZSORT 0
 
@@ -27,7 +28,10 @@ extern "C"{
 #define POINTNUM int(sizeof(pointvec)/sizeof(pointvec[0]))
 #define WIRENUM int(sizeof(wireframe)/sizeof(wireframe[0]))
 
+#define MAXPROC_POLYNUM (POLYNUM*3/5)
+
 vector3 pv[12][3];
+
 
 //-----------------------------------------------------------------------------
 // Read CCOUNT register.
@@ -81,21 +85,29 @@ struct draworder_t{
   int draworder;
   int zdata;
 };
-draworder_t draworder[POLYNUM];
+draworder_t draworder[MAXPROC_POLYNUM];
 #endif
+
+uint16_t *drawbuff[2];
+
+float *zlinebuf;
 
 
 int main3d(void){
   Matrix4 m;
   Matrix4 projection;
   Matrix4 obj;
+  int lastbuff = 0;
 
-  uint16_t drawbuff[2][window_width];
+  drawbuff[0] = new uint16_t[window_width*DRAW_NLINES];
+  drawbuff[1] = new uint16_t[window_width*DRAW_NLINES];
+  zlinebuf = new float[window_width*DRAW_NLINES];
+  
+  texturetriangle *t[MAXPROC_POLYNUM];
 
-  float zlinebuf[window_width];
-  texturetriangle *t[POLYNUM];
-
-  for(int i=0;i<POLYNUM*3/4;i++){
+  for(int i=0;i<MAXPROC_POLYNUM;i++){
+    printf("%d\n",i);
+    fflush(stdout);
     t[i] = new texturetriangle;
   }
 
@@ -110,7 +122,7 @@ int main3d(void){
   fvector2 np = fvector2(440.f,0);
   vector2 pnp;
   bool clicking = false;
-  float average = 20.f;
+  float average = 0.f;
     
   fvector4 vo[3];
   fvector4 v[3];
@@ -121,15 +133,20 @@ int main3d(void){
   uint32_t prev = 0;  
 
   veye = fvector3(0,0,-15.5f);
-  obj = obj*magnify(2);
-  send_first(0);
+  obj = obj*magnify(0.995);
   while(1){
     {
       esp_task_wdt_feed();      // if(hogec!=0)
       // 	send_aline_finish();
       if(1){
-	average = average *0.995+0.005*240000000.f/(xos_get_ccount()-prev);
-	printf("%f %.2f fps/%.2f :%dface\n",np.x,240000000.f/(xos_get_ccount()-prev),average,tnum);
+	if(prev){
+	  if(0&&average){
+	    average = average *0.9+0.1*240000000.f/(xos_get_ccount()-prev);
+	  }else{
+	    average = 240000000.f/(xos_get_ccount()-prev);
+	  }
+	  printf("%.2ffps tri:%d\n",average,tnum);
+	}
 	prev = xos_get_ccount();
       }
       tnum=0;
@@ -138,16 +155,16 @@ int main3d(void){
     np.x+=2.f;    //camera rotation
     //視点計算
 #if MODEL == 1
-    dist = 3.f + 1.4f*cosf(np.x/150.f*3.14159265358979324f);
+    dist = 2.0f;// + 1.4f*cosf(np.x/150.f*3.14159265358979324f);
 #else
-    dist = 5.f + 2.5f*cosf(np.x/150.f*3.14159265358979324f);
+    dist = 3.5f + 1.5f*cosf(np.x/150.f*3.14159265358979324f);
 #endif
     veye = -fvector3(cosf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f),sinf(np.y/300.f*3.14159265f),sinf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f));
     //透視投影行列とカメラ行列の合成
 #if MODEL <= 3
-    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj;//*translation(fvector3(0,0,-0.7));
+    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj*translation(fvector3(0,-0.3,0));
 #else
-    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj*translation(fvector3(0,0,-0.7));
+    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj*translation(fvector3(0,0.3,-0.7));
 #endif
     //頂点データを変換
     for(int j=0;j<POINTNUM;j++){
@@ -201,25 +218,28 @@ int main3d(void){
     
 #endif
     //ラインごとに描画しLCDに転送
-    for(int y=0;y<window_height;y++){
-      for(int i=0;i<window_width;i++){
+    for(int y=0;y<window_height/DRAW_NLINES;y++){
+      for(int i=0;i<window_width*DRAW_NLINES;i++){
 	zlinebuf[i]=1.f;
-	drawbuff[y&1][i]=0x0020;/*RGB*/
+	drawbuff[lastbuff][i]=0x0020;/*RGB*/
       }
       for(int i=0;i<tnum;i++){
 #if ZSORT
 	if(t[draworder[i].draworder]->ymin < y&&t[draworder[i].draworder]->ymax >= y){
-	  t[draworder[i].draworder]->draw(zlinebuf,drawbuff[y&1]);
-#else
-	if(t[i]->ymin < y&&t[i]->ymax >= y){
-	  t[i]->draw(zlinebuf,drawbuff[y&1]);
-#endif
+	  t[draworder[i].draworder]->draw(zlinebuf,drawbuff[lastbuff],y*DRAW_NLINES);
 	}
+#else
+
+	if(t[i]->ymin < (y*DRAW_NLINES)+DRAW_NLINES&&t[i]->ymax >= y*DRAW_NLINES){
+  	  t[i]->draw(zlinebuf,drawbuff[lastbuff],y*DRAW_NLINES);
+	}
+#endif
       }
-      send_line(y,drawbuff[y&1]);
+      send_line(y*DRAW_NLINES,drawbuff[lastbuff]);
+      lastbuff = 1-lastbuff;
     }
   }
-  for(int i=0;i<POLYNUM;i++){
+  for(int i=0;i<MAXPROC_POLYNUM;i++){
     delete[] t[i];
   }
 }

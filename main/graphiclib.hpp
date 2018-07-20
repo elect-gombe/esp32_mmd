@@ -7,7 +7,7 @@
 #include "vector2.hpp"
 #include "fvector3.hpp"
 #include <assert.h>
-
+#include "3dconfig.hpp"
 #undef assert
 #define assert(x) (void)(x)
 
@@ -15,11 +15,6 @@
 #define __GRAPHICLIB_H
 
 extern int frame;
-const static int window_width = 160;
-const static int window_height = 128;
-
-extern const int window_width;
-extern const int window_height;
 
 template <typename T>
 T min(T v1 , T v2) {

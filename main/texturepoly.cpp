@@ -1,7 +1,8 @@
 #include "texturepoly.hpp"
+#include "3dconfig.hpp"
 
-int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
-  int sx,ex;
+int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
+  int sx,ex,i;
   float sz,ez;
   float zv;
   float deltaz;
@@ -11,119 +12,251 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
   fvector2 cuv;
   float sw,ew,wv,deltaw;
 
-  //開始地点と終了地点の各成分の算出
-  if(pdx[0] >= pdx[1]){
-    sx = (pdx[1]-0.01f);
-    ex = (pdx[0]+0.01f);
-    sz = pdz[1];
-    ez = pdz[0];
-    sw = pdw[1];
-    ew = pdw[0];
-    suv = pdt[1];
-    euv = pdt[0];
-  }else{
-    sx = (pdx[0]-0.01f);
-    ex = (pdx[1]+0.01f);
-    sz = pdz[0];
-    ez = pdz[1];
-    sw = pdw[0];
-    ew = pdw[1];
-    suv = pdt[0];
-    euv = pdt[1];
+  i=0;
+  if(ymin+yno > dry){
+    i = ymin-dry;
+    zlinebuf += window_width*(i);
+    buff += window_width*(i);
   }
 
-  //各成分の増加量の計算
-  float d_x;
-  if(sx!=ex){
-    d_x = 1.f/(ex-sx);
-    deltaz = (ez-sz)*d_x;
-    deltaw = (ew-sw)*d_x;
-    deltauv = (euv-suv)*d_x;
-  }else{
-    deltaz = 0;
-    deltaw = 0;
-  }
-  zv = sz - deltaz*0.5f;
-  wv = sw - deltaw*0.5f;
-  uv = suv - deltauv*0.5f;
+  while(i<DRAW_NLINES){
+    //開始地点と終了地点の各成分の算出
+    if(pdx[0] >= pdx[1]){
+      sx = (pdx[1]-0.01f);
+      ex = (pdx[0]+0.01f);
+      sz = pdz[1];
+      ez = pdz[0];
+      sw = pdw[1];
+      ew = pdw[0];
+      suv = pdt[1];
+      euv = pdt[0];
+    }else{
+      sx = (pdx[0]-0.01f);
+      ex = (pdx[1]+0.01f);
+      sz = pdz[0];
+      ez = pdz[1];
+      sw = pdw[0];
+      ew = pdw[1];
+      suv = pdt[0];
+      euv = pdt[1];
+    }
 
-  //xのクリップ
-  if(sx >= window_width)goto distnext;
-  if(sx < 0){
-    zv -= sx * deltaz;
-    wv -= sx * deltaw;
-    uv -= deltauv*sx;
-    sx=0;
-  }
-  if(ex < 0)goto distnext;
-  if(ex >= window_width){
-    ex = window_width-1;
-  }
+    //各成分の増加量の計算
+    float d_x;
+    if(sx!=ex){
+      d_x = 1.f/(ex-sx);
+      deltaz = (ez-sz)*d_x;
+      deltaw = (ew-sw)*d_x;
+      deltauv = (euv-suv)*d_x;
+    }else{
+      deltaz = 0;
+      deltaw = 0;
+    }
+    zv = sz - deltaz*0.5f;
+    wv = sw - deltaw*0.5f;
+    uv = suv - deltauv*0.5f;
 
-  //描画処理
-  {
-    int shift = 8;
-    int mask = 0xFF;
-    int cr,cg,cb;
-    float bri;
-    float smoke;
-    for(int i=sx;i<ex;i++){
-      //各成分の増加計算
-      zv += deltaz;
-      wv += deltaw;
-      uv += deltauv;
-      //z test
-      if(zv < zlinebuf[i]){
-       if(zv > 0){
-	 //テクスチャ座標の算出
-	 cuv = uv *(1.f/wv);
-	 //ｚデータの書き込み
-	 zlinebuf[i] = zv;
-	 uint16_t dtx;
-	 dtx = 0xFFFF;
-	 //テクスチャの取得
-	 dtx = tx[65535-
-		  (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
-	 cr = (dtx) >> 11;
-	 cg = ((dtx) >> 5)&0x3F;
-	 cb = (dtx) &0x1F;
-	 // //遠くのに対して黒く補正する。
-	 // smoke = min(1.f-zv,0.2f)*5.f;
-	 bri = col;
-	 // //色の計算
-	 cr=(cr*bri);
-	 cg=(cg*bri);
-	 cb=(cb*bri);
-	 //色の書き込み
-	 ((uint8_t*)buff)[i*2] = ((cg<<5)|(cb<<11))>>8;
-	 ((uint8_t*)buff)[i*2+1] = (cr|(cg<<5));
+    //xのクリップ
+    if(sx >= window_width)goto distnext;
+    if(sx < 0){
+      zv -= sx * deltaz;
+      wv -= sx * deltaw;
+      uv -= deltauv*sx;
+      sx=0;
+    }
+    if(ex < 0)goto distnext;
+    if(ex >= window_width){
+      ex = window_width-1;
+    }
+    {
+      //描画処理
+      int shift = 8;
+      int mask = 0xFF;
+      int cr,cg,cb;
+      float bri;
+      float smoke;
+      for(int i=sx;i<ex;i++){
+	//各成分の増加計算
+	zv += deltaz;
+	wv += deltaw;
+	uv += deltauv;
+	//z test
+	if(zv < zlinebuf[i]){
+	  if(zv > 0){
+	    //テクスチャ座標の算出
+	    cuv = uv *(1.f/wv);
+	    //ｚデータの書き込み
+	    zlinebuf[i] = zv;
+	    uint16_t dtx;
+	    //テクスチャの取得
+	    dtx = tx[65535-
+		     (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
+	    cr = (dtx) >> 11;
+	    cg = ((dtx) >> 5)&0x3F;
+	    cb = (dtx) &0x1F;
+	    // //遠くのに対して黒く補正する。
+	    // smoke = min(1.f-zv,0.2f)*5.f;
+	    bri = col;
+	    // //色の計算
+	    cr=(cr*bri);
+	    cg=(cg*bri);
+	    cb=(cb*bri);
+	    //色の書き込み
+	    ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
+	    ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
 
-	 // ((uint8_t*)buff)[i*2] = 0xFF;
-	 // ((uint8_t*)buff)[i*2+1] = 0xFF;
-       }
+	    // ((uint8_t*)buff)[i*2] = 0xFF;
+	    // ((uint8_t*)buff)[i*2+1] = 0xFF;
+	  }
+	}
       }
     }
-  }
- distnext:
-  //三角型の真ん中のところに達したか？
-  if(yno+ymin >= ymiddle){
-    //増加量の更新
-    phase=1;
-  }
-  yno++;
+  distnext:
+    //三角型の真ん中のところに達したか？
+    if(yno+ymin >= ymiddle){
+      //増加量の更新
+      phase=1;
+    }
+    yno++;
 
-  //各成分のdyに対する増加分の計算
-  for(int i=0;i<2;i++){
-    pdx[i]+=delta[phase][i];
-    pdz[i]+=zdelta[phase][i];
-    pdw[i]+=wdelta[phase][i];
-    pdt[i]+=uvdelta[phase][i];
-  }
+    //各成分のdyに対する増加分の計算
+    for(int i=0;i<2;i++){
+      pdx[i]+=delta[phase][i];
+      pdz[i]+=zdelta[phase][i];
+      pdw[i]+=wdelta[phase][i];
+      pdt[i]+=uvdelta[phase][i];
+    }
 
-  if(yno+ymin > ymax)return 1;
+    if(yno+ymin > ymax)return 1;
+    zlinebuf += window_width;
+    buff += window_width;
+    i++;
+  }
   //to be continued.
   return 0;
 }
+// int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
+//   int sx,ex;
+//   float sz,ez;
+//   float zv;
+//   float deltaz;
+//   fvector2 suv,euv;
+//   fvector2 uv;
+//   fvector2 deltauv;
+//   fvector2 cuv;
+//   float sw,ew,wv,deltaw;
+
+//   //開始地点と終了地点の各成分の算出
+//   if(pdx[0] >= pdx[1]){
+//     sx = (pdx[1]-0.01f);
+//     ex = (pdx[0]+0.01f);
+//     sz = pdz[1];
+//     ez = pdz[0];
+//     sw = pdw[1];
+//     ew = pdw[0];
+//     suv = pdt[1];
+//     euv = pdt[0];
+//   }else{
+//     sx = (pdx[0]-0.01f);
+//     ex = (pdx[1]+0.01f);
+//     sz = pdz[0];
+//     ez = pdz[1];
+//     sw = pdw[0];
+//     ew = pdw[1];
+//     suv = pdt[0];
+//     euv = pdt[1];
+//   }
+
+//   //各成分の増加量の計算
+//   float d_x;
+//   if(sx!=ex){
+//     d_x = 1.f/(ex-sx);
+//     deltaz = (ez-sz)*d_x;
+//     deltaw = (ew-sw)*d_x;
+//     deltauv = (euv-suv)*d_x;
+//   }else{
+//     deltaz = 0;
+//     deltaw = 0;
+//   }
+//   zv = sz - deltaz*0.5f;
+//   wv = sw - deltaw*0.5f;
+//   uv = suv - deltauv*0.5f;
+
+//   //xのクリップ
+//   if(sx >= window_width)goto distnext;
+//   if(sx < 0){
+//     zv -= sx * deltaz;
+//     wv -= sx * deltaw;
+//     uv -= deltauv*sx;
+//     sx=0;
+//   }
+//   if(ex < 0)goto distnext;
+//   if(ex >= window_width){
+//     ex = window_width-1;
+//   }
+
+//   //描画処理
+//   {
+//     int shift = 8;
+//     int mask = 0xFF;
+//     int cr,cg,cb;
+//     float bri;
+//     float smoke;
+//     for(int i=sx;i<ex;i++){
+//       //各成分の増加計算
+//       zv += deltaz;
+//       wv += deltaw;
+//       uv += deltauv;
+//       //z test
+//       if(zv < zlinebuf[i]){
+// 	if(zv > 0){
+// 	  //テクスチャ座標の算出
+// 	  cuv = uv *(1.f/wv);
+// 	  //ｚデータの書き込み
+// 	  zlinebuf[i] = zv;
+// 	  uint16_t dtx;
+// 	  //テクスチャの取得
+// 	  dtx = tx[65535-
+// 		   (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
+// 	  cr = (dtx) >> 11;
+// 	  cg = ((dtx) >> 5)&0x3F;
+// 	  cb = (dtx) &0x1F;
+// 	  // //遠くのに対して黒く補正する。
+// 	  // smoke = min(1.f-zv,0.2f)*5.f;
+// 	  bri = col;
+// 	  // //色の計算
+// 	  cr=(cr*bri);
+// 	  cg=(cg*bri);
+// 	  cb=(cb*bri);
+// 	  //色の書き込み
+// 	  ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
+// 	  ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
+
+// 	  // ((uint8_t*)buff)[i*2] = 0xFF;
+// 	  // ((uint8_t*)buff)[i*2+1] = 0xFF;
+// 	}
+//       }
+//     }
+//  distnext:
+//   //三角型の真ん中のところに達したか？
+//   if(yno+ymin >= ymiddle){
+//     //増加量の更新
+//     phase=1;
+//   }
+//   yno++;
+
+//   //各成分のdyに対する増加分の計算
+//   for(int i=0;i<2;i++){
+//     pdx[i]+=delta[phase][i];
+//     pdz[i]+=zdelta[phase][i];
+//     pdw[i]+=wdelta[phase][i];
+//     pdt[i]+=uvdelta[phase][i];
+//   }
+
+//   if(yno+ymin > ymax)return 1;
+//   //to be continued.
+//   return 0;
+// }
 
 #warning todo add comment
 int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t *tex,const fvector2 puv[3]){
