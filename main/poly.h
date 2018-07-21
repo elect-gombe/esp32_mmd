@@ -1,4 +1,4 @@
-#define MODEL 6
+#define MODEL 5
 
 const fvector3_t pointvec[248*6]={
 	{-15.67f/60.f, 126.91f/60.f-1.5f, -15.04f/60.f},

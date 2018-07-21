@@ -5,6 +5,7 @@
 
 class triangle{
 public:
+  uint8_t isexisting;
   // top point.
   float ymiddle;
   float col;

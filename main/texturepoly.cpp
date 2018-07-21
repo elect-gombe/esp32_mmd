@@ -83,10 +83,10 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
 	//z test
 	if(zv < zlinebuf[i]){
 	  if(zv > 0){
+	    zlinebuf[i] = zv;
 	    //テクスチャ座標の算出
 	    cuv = uv *(1.f/wv);
 	    //ｚデータの書き込み
-	    zlinebuf[i] = zv;
 	    uint16_t dtx;
 	    //テクスチャの取得
 	    dtx = tx[65535-
@@ -97,7 +97,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
 	    // //遠くのに対して黒く補正する。
 	    // smoke = min(1.f-zv,0.2f)*5.f;
 	    bri = col;
-	    // //色の計算
+	    // // //色の計算
 	    cr=(cr*bri);
 	    cg=(cg*bri);
 	    cb=(cb*bri);
@@ -135,6 +135,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
   //to be continued.
   return 0;
 }
+
 // int texturetriangle::draw(float *zlinebuf,uint16_t *buff){
 //   int sx,ex;
 //   float sz,ez;
@@ -481,6 +482,7 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
     uvdelta[0][1]=uvdelta_mid_btm;
   }
   ymiddle = p[1].y;
+  isexisting = 1;
   
   return 0;
 }

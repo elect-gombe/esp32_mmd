@@ -323,10 +323,10 @@ void send_line(int ypos, uint16_t *linedata)
     trans[1].tx_data[2]=(window_width/2+160-1)>>8;       //End Col High
     trans[1].tx_data[3]=(window_width/2+160-1)&0xff;     //End Col Low
     trans[2].tx_data[0]=0x2B;           //Page address set
-    trans[3].tx_data[0]=ypos>>8;        //Start page high
-    trans[3].tx_data[1]=ypos&0xff;      //start page low
-    trans[3].tx_data[2]=(ypos+PARALLEL_LINES)>>8;    //end page high
-    trans[3].tx_data[3]=(ypos+PARALLEL_LINES)&0xff;  //end page low
+    trans[3].tx_data[0]=(ypos+120-window_height/2)>>8;        //Start page high
+    trans[3].tx_data[1]=(ypos+120-window_height/2)&0xff;      //start page low
+    trans[3].tx_data[2]=(ypos+120-window_height/2+PARALLEL_LINES)>>8;    //end page high
+    trans[3].tx_data[3]=(ypos+120-window_height/2+PARALLEL_LINES)&0xff;  //end page low
     trans[4].tx_data[0]=0x2C;           //memory write
     trans[5].tx_buffer=linedata;        //finally send the line data
     trans[5].length=window_width*2*8*PARALLEL_LINES;          //Data length, in bits
@@ -811,5 +811,10 @@ void app_main()
     /* //Go do nice stuff. */
     /* display_pretty_colors(spi); */
     //display_pretty_colors(spi);
+    /* main3d(); */
+    TaskHandle_t thread1,thread2;
+    void vTask(void*);
+    xTaskCreatePinnedToCore(vTask,"vTask", 4096,  NULL,5,&thread1,1);
     main3d();
+    while(1);
 }
