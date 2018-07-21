@@ -1,9 +1,10 @@
-x# MMD with ESP32
+# MMD with ESP32
 ## MMDモデルの表示 MMD model display test
 
 <img src="http://i.imgur.com/9LDjwK9.jpg" alt="サンプル" width="300">
-Mはげさんのソースコードから拝借して表示しました。
+Video:(twitter) https://twitter.com/elect_gombe/status/872766291135692800
 
+Mはげさんのソースコードから拝借して表示しました。
 # How to
 
 ## Pin assign
