@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #ifndef __TEXTURE_POLY_H
 #define __TEXTURE_POLY_H
 
@@ -6,6 +12,8 @@
 #include "vector3.hpp"
 #include "fvector2.hpp"
 #include "fvector4.hpp"
+
+#define IRAM_ATTR __attribute__((section(".iram1")))
 
 //テクスチャ型
 struct texture_t{
@@ -26,8 +34,9 @@ private:
   float pdw[2];
   float wdelta[2][2];
 public:
+  texturetriangle(){}
   int triangle_set(fvector4 px[3],float c,const texture_t *t,const fvector2 puv[3]);
-  int draw(float *zlinebuf,uint16_t *buff,int dry);
+  int draw(uint16_t *zlinebuf,uint16_t *buff,int dry);
   static bool LessZ(const texturetriangle& rLeft, const texturetriangle& rRight) ;
 };
 

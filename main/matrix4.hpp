@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #include "fvector3.hpp"
 #include "fvector4.hpp"
 #include <stdint.h>

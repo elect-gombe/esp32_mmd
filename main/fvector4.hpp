@@ -1,3 +1,10 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
+
 #ifndef __FVECTOR4_H
 #define __FVECTOR4_H
 #include <stdint.h>
@@ -122,5 +129,17 @@ fvector3 calc_nv(const fvector4 v[3]){
 
   return n;
 }
+
+static inline
+bool culling(fvector4 vertices[]) {
+    float P1x = vertices[1].x - vertices[0].x;
+    float P1y = vertices[1].y - vertices[0].y;
+    float P2x = vertices[2].x - vertices[0].x;
+    float P2y = vertices[2].y - vertices[0].y;
+    float OPz = P1x*P2y - P1y*P2x;
+    return OPz < 0;
+}
+
+
 
 #endif

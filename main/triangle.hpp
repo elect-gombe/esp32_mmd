@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #ifndef __TRIANGLE_H
 #define __TRIANGLE_H
 #include "vector3.hpp"
@@ -10,13 +16,13 @@ public:
   float ymiddle;
   float col;
   uint8_t ymin;
-  uint8_t ymax;
+  uint16_t ymax;
   uint8_t yno;
   uint8_t phase;
   float delta[2][2];
-  float zdelta[2][2];
+  int16_t zdelta[2][2]; //
   float pdx[2];
-  float pdz[2];
+  uint16_t pdz[2];
   // int z_val;
   // int dxdz;
   // int dydz;

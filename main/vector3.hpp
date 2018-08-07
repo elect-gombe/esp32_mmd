@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #ifndef __VECTOR3_H
 #define __VECTOR3_H
 #include <stdint.h>

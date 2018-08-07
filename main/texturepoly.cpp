@@ -1,11 +1,17 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #include "texturepoly.hpp"
 #include "3dconfig.hpp"
 
-int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
+int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
   int sx,ex,i;
-  float sz,ez;
-  float zv;
-  float deltaz;
+  int sz,ez;
+  int zv;
+  int deltaz;
   fvector2 suv,euv;
   fvector2 uv;
   fvector2 deltauv;
@@ -21,7 +27,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
 
   while(i<DRAW_NLINES){
     //開始地点と終了地点の各成分の算出
-    if(pdx[0] >= pdx[1]){
+    // if(pdx[0] >= pdx[1]){
       sx = (pdx[1]-0.01f);
       ex = (pdx[0]+0.01f);
       sz = pdz[1];
@@ -30,16 +36,16 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
       ew = pdw[0];
       suv = pdt[1];
       euv = pdt[0];
-    }else{
-      sx = (pdx[0]-0.01f);
-      ex = (pdx[1]+0.01f);
-      sz = pdz[0];
-      ez = pdz[1];
-      sw = pdw[0];
-      ew = pdw[1];
-      suv = pdt[0];
-      euv = pdt[1];
-    }
+    //    } else{
+    //   sx = (pdx[0]-0.01f);
+    //   ex = (pdx[1]+0.01f);
+    //   sz = pdz[0];
+    //   ez = pdz[1];
+    //   sw = pdw[0];
+    //   ew = pdw[1];
+    //   suv = pdt[0];
+    //   euv = pdt[1];
+    // }
 
     //各成分の増加量の計算
     float d_x;
@@ -52,7 +58,7 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
       deltaz = 0;
       deltaw = 0;
     }
-    zv = sz - deltaz*0.5f;
+    zv = sz - (deltaz>>1);
     wv = sw - deltaw*0.5f;
     uv = suv - deltauv*0.5f;
 
@@ -82,32 +88,30 @@ int texturetriangle::draw(float *zlinebuf,uint16_t *buff,int dry){
 	uv += deltauv;
 	//z test
 	if(zv < zlinebuf[i]){
-	  if(zv > 0){
-	    zlinebuf[i] = zv;
-	    //テクスチャ座標の算出
-	    cuv = uv *(1.f/wv);
-	    //ｚデータの書き込み
-	    uint16_t dtx;
-	    //テクスチャの取得
-	    dtx = tx[65535-
-		     (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
-	    cr = (dtx) >> 11;
-	    cg = ((dtx) >> 5)&0x3F;
-	    cb = (dtx) &0x1F;
-	    // //遠くのに対して黒く補正する。
-	    // smoke = min(1.f-zv,0.2f)*5.f;
-	    bri = col;
-	    // // //色の計算
-	    cr=(cr*bri);
-	    cg=(cg*bri);
-	    cb=(cb*bri);
-	    //色の書き込み
-	    ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
-	    ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
+	  zlinebuf[i] = zv;
+	  //テクスチャ座標の算出
+	  cuv = uv *(1.f/wv);
+	  //ｚデータの書き込み
+	  uint16_t dtx;
+	  //テクスチャの取得
+	  dtx = tx[65535-
+		   (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
+	  cr = (dtx) >> 11;
+	  cg = ((dtx) >> 5)&0x3F;
+	  cb = (dtx) &0x1F;
+	  // //遠くのに対して黒く補正する。
+	  // smoke = min(1.f-zv,0.2f)*5.f;
+	  bri = col;
+	  // // //色の計算
+	  cr=(cr*bri);
+	  cg=(cg*bri);
+	  cb=(cb*bri);
+	  //色の書き込み
+	  ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
+	  ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
 
-	    // ((uint8_t*)buff)[i*2] = 0xFF;
-	    // ((uint8_t*)buff)[i*2+1] = 0xFF;
-	  }
+	  // ((uint8_t*)buff)[i*2] = 0xFF;
+	  // ((uint8_t*)buff)[i*2+1] = 0xFF;
 	}
       }
     }
@@ -321,10 +325,9 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
     uv[2]=t2;
   }
 
-  this->col = col;
   ymin = p[0].y;
-  ymax = p[2].y;
-  if(ymax>=window_height)ymax=window_height-1;
+  if(p[2].y>=window_height)ymax=window_height-1;
+  else ymax = p[2].y;
 
   top_btm_x = p[0].x;
   top_mid_x = p[0].x;
@@ -433,8 +436,8 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   if(p[1].x >= split_x){
     pdx[0] = top_mid_x;
     pdx[1] = top_btm_x;
-    pdz[0] = top_mid_z;
-    pdz[1] = top_btm_z;
+    pdz[0] = top_mid_z*65536;
+    pdz[1] = top_btm_z*65536;
     pdw[0] = top_mid_w;
     pdw[1] = top_btm_w;
     pdt[0] = top_mid_uv;
@@ -443,10 +446,10 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
     delta[1][1]=delta_top_btm;
     delta[0][0]=delta_mid_btm;
     delta[0][1]=delta_top_btm;
-    zdelta[1][0]=zdelta_top_mid;
-    zdelta[1][1]=zdelta_top_btm;
-    zdelta[0][0]=zdelta_mid_btm;
-    zdelta[0][1]=zdelta_top_btm;
+    zdelta[1][0]=zdelta_top_mid*65536;
+    zdelta[1][1]=zdelta_top_btm*65536;
+    zdelta[0][0]=zdelta_mid_btm*65536;
+    zdelta[0][1]=zdelta_top_btm*65536;
     wdelta[1][0]=wdelta_top_mid;
     wdelta[1][1]=wdelta_top_btm;
     wdelta[0][0]=wdelta_mid_btm;
@@ -458,8 +461,8 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   }else{
     pdx[0] = top_btm_x;
     pdx[1] = top_mid_x;
-    pdz[0] = top_btm_z;
-    pdz[1] = top_mid_z;
+    pdz[0] = top_btm_z*65536;
+    pdz[1] = top_mid_z*65536;
     pdw[0] = top_btm_w;
     pdw[1] = top_mid_w;
     pdt[0] = top_btm_uv;
@@ -468,10 +471,10 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
     delta[1][1]=delta_top_mid;
     delta[0][0]=delta_top_btm;
     delta[0][1]=delta_mid_btm;
-    zdelta[1][0]=zdelta_top_btm;
-    zdelta[1][1]=zdelta_top_mid;
-    zdelta[0][0]=zdelta_top_btm;
-    zdelta[0][1]=zdelta_mid_btm;
+    zdelta[1][0]=zdelta_top_btm*65536;
+    zdelta[1][1]=zdelta_top_mid*65536;
+    zdelta[0][0]=zdelta_top_btm*65536;
+    zdelta[0][1]=zdelta_mid_btm*65536;
     wdelta[1][0]=wdelta_top_btm;
     wdelta[1][1]=wdelta_top_mid;
     wdelta[0][0]=wdelta_top_btm;

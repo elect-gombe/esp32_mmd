@@ -1,10 +1,7 @@
-#include "fvector2.hpp"
-// #include <stdio.h>
+/**
+Copyright (c) 2018 Gombe.
 
-// void fvector2::print(void){
-// #ifdef _STRFUNC
-//   xprintf("(%f,%f)\n",x,y);
-// #else
-//   printf("(%f,%f)\n",x,y);
-// #endif
-// }
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
+#include "fvector2.hpp"
