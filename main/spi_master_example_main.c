@@ -25,14 +25,13 @@ spi_device_handle_t spi;
  before the transaction is sent, the callback will set this line to the correct state.
 */
 
-#define PIN_NUM_MISO 25
+#define PIN_NUM_MISO 19
 #define PIN_NUM_MOSI 23
 #define PIN_NUM_CLK  18
 #define PIN_NUM_CS   14
 
 #define PIN_NUM_DC   27
 #define PIN_NUM_RST  33
-#define PIN_NUM_BCKL 5
 
 //To speed up transfers, every SPI transfer sends a bunch of lines. This define specifies how many. More means more memory use,
 //but less overhead for setting up / finishing transfers. Make sure 240 is dividable by this.
@@ -169,14 +168,13 @@ void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd)
 }
 
 //Send data to the LCD. Uses spi_device_transmit, which waits until the transfer is complete.
-void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
+void lcd_data(spi_device_handle_t spi,uint8_t data)
 {
     esp_err_t ret;
     spi_transaction_t t;
-    if (len==0) return;             //no need to send anything
     memset(&t, 0, sizeof(t));       //Zero out the transaction
-    t.length=len*8;                 //Len is in bytes, transaction length is in bits.
-    t.tx_buffer=data;               //Data
+    t.length=1*8;                 //Len is in bytes, transaction length is in bits.
+    t.tx_buffer=&data;               //Data
     t.user=(void*)1;                //D/C needs to be set to 1
     ret=spi_device_transmit(spi, &t);  //Transmit!
     assert(ret==ESP_OK);            //Should have had no issues.
@@ -206,6 +204,152 @@ uint32_t lcd_get_id(spi_device_handle_t spi)
 
     return *(uint32_t*)t.rx_data;
 }
+// Change the width and height if required (defined in portrait mode)
+// or use the constructor to over-ride defaults
+#define TFT_WIDTH  240
+#define TFT_HEIGHT 320
+
+
+// Color definitions for backwards compatibility with old sketches
+// use colour definitions like TFT_BLACK to make sketches more portable
+#define ILI9341_BLACK       0x0000      /*   0,   0,   0 */
+#define ILI9341_NAVY        0x000F      /*   0,   0, 128 */
+#define ILI9341_DARKGREEN   0x03E0      /*   0, 128,   0 */
+#define ILI9341_DARKCYAN    0x03EF      /*   0, 128, 128 */
+#define ILI9341_MAROON      0x7800      /* 128,   0,   0 */
+#define ILI9341_PURPLE      0x780F      /* 128,   0, 128 */
+#define ILI9341_OLIVE       0x7BE0      /* 128, 128,   0 */
+#define ILI9341_LIGHTGREY   0xC618      /* 192, 192, 192 */
+#define ILI9341_DARKGREY    0x7BEF      /* 128, 128, 128 */
+#define ILI9341_BLUE        0x001F      /*   0,   0, 255 */
+#define ILI9341_GREEN       0x07E0      /*   0, 255,   0 */
+#define ILI9341_CYAN        0x07FF      /*   0, 255, 255 */
+#define ILI9341_RED         0xF800      /* 255,   0,   0 */
+#define ILI9341_MAGENTA     0xF81F      /* 255,   0, 255 */
+#define ILI9341_YELLOW      0xFFE0      /* 255, 255,   0 */
+#define ILI9341_WHITE       0xFFFF      /* 255, 255, 255 */
+#define ILI9341_ORANGE      0xFD20      /* 255, 165,   0 */
+#define ILI9341_GREENYELLOW 0xAFE5      /* 173, 255,  47 */
+#define ILI9341_PINK        0xF81F
+
+#define BLACK 0x0000       /*   0,   0,   0 */
+#define NAVY 0x000F        /*   0,   0, 128 */
+#define DARKGREEN 0x03E0   /*   0, 128,   0 */
+#define DARKCYAN 0x03EF    /*   0, 128, 128 */
+#define MAROON 0x7800      /* 128,   0,   0 */
+#define PURPLE 0x780F      /* 128,   0, 128 */
+#define OLIVE 0x7BE0       /* 128, 128,   0 */
+#define LIGHTGREY 0xC618   /* 192, 192, 192 */
+#define DARKGREY 0x7BEF    /* 128, 128, 128 */
+#define BLUE 0x001F        /*   0,   0, 255 */
+#define GREEN 0x07E0       /*   0, 255,   0 */
+#define CYAN 0x07FF        /*   0, 255, 255 */
+#define RED 0xF800         /* 255,   0,   0 */
+#define MAGENTA 0xF81F     /* 255,   0, 255 */
+#define YELLOW 0xFFE0      /* 255, 255,   0 */
+#define WHITE 0xFFFF       /* 255, 255, 255 */
+#define ORANGE 0xFD20      /* 255, 165,   0 */
+#define GREENYELLOW 0xAFE5 /* 173, 255,  47 */
+#define PINK 0xF81F
+
+
+// Delay between some initialisation commands
+#define TFT_INIT_DELAY 0x80 // Not used unless commandlist invoked
+
+
+// Generic commands used by TFT_eSPI.cpp
+#define TFT_NOP     0x00
+#define TFT_SWRST   0x01
+
+#define TFT_CASET   0x2A
+#define TFT_PASET   0x2B
+#define TFT_RAMWR   0x2C
+
+#define TFT_RAMRD   0x2E
+#define TFT_IDXRD   0xDD // ILI9341 only, indexed control register read
+
+#define TFT_MADCTL  0x36
+#define TFT_MAD_MY  0x80
+#define TFT_MAD_MX  0x40
+#define TFT_MAD_MV  0x20
+#define TFT_MAD_ML  0x10
+#define TFT_MAD_BGR 0x08
+#define TFT_MAD_MH  0x04
+#define TFT_MAD_RGB 0x00
+
+#define TFT_INVOFF  0x20
+#define TFT_INVON   0x21
+
+
+// All ILI9341 specific commands some are used by init()
+#define ILI9341_NOP     0x00
+#define ILI9341_SWRESET 0x01
+#define ILI9341_RDDID   0x04
+#define ILI9341_RDDST   0x09
+
+#define ILI9341_SLPIN   0x10
+#define ILI9341_SLPOUT  0x11
+#define ILI9341_PTLON   0x12
+#define ILI9341_NORON   0x13
+
+#define ILI9341_RDMODE  0x0A
+#define ILI9341_RDMADCTL  0x0B
+#define ILI9341_RDPIXFMT  0x0C
+#define ILI9341_RDIMGFMT  0x0A
+#define ILI9341_RDSELFDIAG  0x0F
+
+#define ILI9341_INVOFF  0x20
+#define ILI9341_INVON   0x21
+#define ILI9341_GAMMASET 0x26
+#define ILI9341_DISPOFF 0x28
+#define ILI9341_DISPON  0x29
+
+#define ILI9341_CASET   0x2A
+#define ILI9341_PASET   0x2B
+#define ILI9341_RAMWR   0x2C
+#define ILI9341_RAMRD   0x2E
+
+#define ILI9341_PTLAR   0x30
+#define ILI9341_VSCRDEF 0x33
+#define ILI9341_MADCTL  0x36
+#define ILI9341_VSCRSADD 0x37
+#define ILI9341_PIXFMT  0x3A
+
+#define ILI9341_WRDISBV  0x51
+#define ILI9341_RDDISBV  0x52
+#define ILI9341_WRCTRLD  0x53
+
+#define ILI9341_FRMCTR1 0xB1
+#define ILI9341_FRMCTR2 0xB2
+#define ILI9341_FRMCTR3 0xB3
+#define ILI9341_INVCTR  0xB4
+#define ILI9341_DFUNCTR 0xB6
+
+#define ILI9341_PWCTR1  0xC0
+#define ILI9341_PWCTR2  0xC1
+#define ILI9341_PWCTR3  0xC2
+#define ILI9341_PWCTR4  0xC3
+#define ILI9341_PWCTR5  0xC4
+#define ILI9341_VMCTR1  0xC5
+#define ILI9341_VMCTR2  0xC7
+
+#define ILI9341_RDID4   0xD3
+#define ILI9341_RDINDEX 0xD9
+#define ILI9341_RDID1   0xDA
+#define ILI9341_RDID2   0xDB
+#define ILI9341_RDID3   0xDC
+#define ILI9341_RDIDX   0xDD // TBC
+
+#define ILI9341_GMCTRP1 0xE0
+#define ILI9341_GMCTRN1 0xE1
+
+#define ILI9341_MADCTL_MY  0x80
+#define ILI9341_MADCTL_MX  0x40
+#define ILI9341_MADCTL_MV  0x20
+#define ILI9341_MADCTL_ML  0x10
+#define ILI9341_MADCTL_RGB 0x00
+#define ILI9341_MADCTL_BGR 0x08
+#define ILI9341_MADCTL_MH  0x04
 
 //Initialize the display
 void lcd_init(spi_device_handle_t spi)
@@ -216,59 +360,176 @@ void lcd_init(spi_device_handle_t spi)
     //Initialize non-SPI GPIOs
     gpio_set_direction(PIN_NUM_DC, GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_NUM_RST, GPIO_MODE_OUTPUT);
-    gpio_set_direction(PIN_NUM_BCKL, GPIO_MODE_OUTPUT);
 
     //Reset the display
     gpio_set_level(PIN_NUM_RST, 0);
     vTaskDelay(100 / portTICK_RATE_MS);
     gpio_set_level(PIN_NUM_RST, 1);
-    vTaskDelay(100 / portTICK_RATE_MS);
+    vTaskDelay(150 / portTICK_RATE_MS);
 
-    //detect LCD type
-    uint32_t lcd_id = lcd_get_id(spi);
-    int lcd_detected_type = 0;
-    int lcd_type;
+    lcd_cmd(spi,0xEF);
+    lcd_data(spi,0x03);
+    lcd_data(spi,0x80);
+    lcd_data(spi,0x02);
 
-    printf("LCD ID: %08X\n", lcd_id);
-    if ( lcd_id == 0 ) {
-        //zero, ili
-        lcd_detected_type = LCD_TYPE_ILI;
-        printf("ILI9341 detected.\n");
-    } else {
-        // none-zero, ST
-        lcd_detected_type = LCD_TYPE_ST;
-        printf("ST7789V detected.\n");
-    }
+    lcd_cmd(spi,0xCF);
+    lcd_data(spi,0x00);
+    lcd_data(spi,0XC1);
+    lcd_data(spi,0X30);
 
-#ifdef CONFIG_LCD_TYPE_AUTO
-    lcd_type = lcd_detected_type;
-#elif defined( CONFIG_LCD_TYPE_ST7789V )
-    printf("kconfig: force CONFIG_LCD_TYPE_ST7789V.\n");
-    lcd_type = LCD_TYPE_ST;
-#elif defined( CONFIG_LCD_TYPE_ILI9341 )
-    printf("kconfig: force CONFIG_LCD_TYPE_ILI9341.\n");
-    lcd_type = LCD_TYPE_ILI;
-#endif
-    if ( lcd_type == LCD_TYPE_ST ) {
-        printf("LCD ST7789V initialization.\n");
-        lcd_init_cmds = st_init_cmds;
-    } else {
-        printf("LCD ILI9341 initialization.\n");
-        lcd_init_cmds = ili_init_cmds;
-    }
+    lcd_cmd(spi,0xED);
+    lcd_data(spi,0x64);
+    lcd_data(spi,0x03);
+    lcd_data(spi,0X12);
+    lcd_data(spi,0X81);
 
-    //Send all the commands
-    while (lcd_init_cmds[cmd].databytes!=0xff) {
-        lcd_cmd(spi, lcd_init_cmds[cmd].cmd);
-        lcd_data(spi, lcd_init_cmds[cmd].data, lcd_init_cmds[cmd].databytes&0x1F);
-        if (lcd_init_cmds[cmd].databytes&0x80) {
-            vTaskDelay(100 / portTICK_RATE_MS);
-        }
-        cmd++;
-    }
+    lcd_cmd(spi,0xE8);
+    lcd_data(spi,0x85);
+    lcd_data(spi,0x00);
+    lcd_data(spi,0x78);
 
-    ///Enable backlight
-    gpio_set_level(PIN_NUM_BCKL, 0);
+    lcd_cmd(spi,0xCB);
+    lcd_data(spi,0x39);
+    lcd_data(spi,0x2C);
+    lcd_data(spi,0x00);
+    lcd_data(spi,0x34);
+    lcd_data(spi,0x02);
+
+    lcd_cmd(spi,0xF7);
+    lcd_data(spi,0x20);
+
+    lcd_cmd(spi,0xEA);
+    lcd_data(spi,0x00);
+    lcd_data(spi,0x00);
+
+    lcd_cmd(spi,ILI9341_PWCTR1);    //Power control
+    lcd_data(spi,0x23);   //VRH[5:0]
+
+    lcd_cmd(spi,ILI9341_PWCTR2);    //Power control
+    lcd_data(spi,0x10);   //SAP[2:0];BT[3:0]
+
+    lcd_cmd(spi,ILI9341_VMCTR1);    //VCM control
+    lcd_data(spi,0x3e);
+    lcd_data(spi,0x28);
+
+    lcd_cmd(spi,ILI9341_VMCTR2);    //VCM control2
+    lcd_data(spi,0x86);  //--
+
+    lcd_cmd(spi,ILI9341_MADCTL);    // Memory Access Control
+  /* #ifdef M5STACK */
+    lcd_data(spi,0xA8); // Rotation 0 (portrait mode)
+  /* #else */
+    //    lcd_data(spi,0x48); // Rotation 0 (portrait mode)
+  /* #endif */
+
+    lcd_cmd(spi,ILI9341_PIXFMT);
+    lcd_data(spi,0x55);
+
+    lcd_cmd(spi,ILI9341_FRMCTR1);
+    lcd_data(spi,0x00);
+    lcd_data(spi,0x13); // 0x18 79Hz, 0x1B default 70Hz, 0x13 100Hz
+
+    lcd_cmd(spi,ILI9341_DFUNCTR);    // Display Function Control
+    lcd_data(spi,0x08);
+    lcd_data(spi,0x82);
+    lcd_data(spi,0x27);
+
+    lcd_cmd(spi,0xF2);    // 3Gamma Function Disable
+    lcd_data(spi,0x00);
+
+    lcd_cmd(spi,ILI9341_GAMMASET);    //Gamma curve selected
+    lcd_data(spi,0x01);
+
+    lcd_cmd(spi,ILI9341_GMCTRP1);    //Set Gamma
+    lcd_data(spi,0x0F);
+    lcd_data(spi,0x31);
+    lcd_data(spi,0x2B);
+    lcd_data(spi,0x0C);
+    lcd_data(spi,0x0E);
+    lcd_data(spi,0x08);
+    lcd_data(spi,0x4E);
+    lcd_data(spi,0xF1);
+    lcd_data(spi,0x37);
+    lcd_data(spi,0x07);
+    lcd_data(spi,0x10);
+    lcd_data(spi,0x03);
+    lcd_data(spi,0x0E);
+    lcd_data(spi,0x09);
+    lcd_data(spi,0x00);
+
+    lcd_cmd(spi,ILI9341_GMCTRN1);    //Set Gamma
+    lcd_data(spi,0x00);
+    lcd_data(spi,0x0E);
+    lcd_data(spi,0x14);
+    lcd_data(spi,0x03);
+    lcd_data(spi,0x11);
+    lcd_data(spi,0x07);
+    lcd_data(spi,0x31);
+    lcd_data(spi,0xC1);
+    lcd_data(spi,0x48);
+    lcd_data(spi,0x08);
+    lcd_data(spi,0x0F);
+    lcd_data(spi,0x0C);
+    lcd_data(spi,0x31);
+    lcd_data(spi,0x36);
+    lcd_data(spi,0x0F);
+
+    lcd_cmd(spi,ILI9341_SLPOUT);    //Exit Sleep
+
+    vTaskDelay(120/ portTICK_RATE_MS);
+    
+    lcd_cmd(spi,ILI9341_DISPON); //Display on
+    vTaskDelay(10/ portTICK_RATE_MS);
+
+    
+    // This is the command sequence that rotates the ILI9341 driver coordinate frame
+    
+    lcd_cmd(spi,TFT_MADCTL);
+    lcd_data(spi,TFT_MAD_BGR);
+
+/* //detect LCD type */
+/*     uint32_t lcd_id = lcd_get_id(spi); */
+/*     int lcd_detected_type = 0; */
+/*     int lcd_type; */
+
+/*     printf("LCD ID: %08X\n", lcd_id); */
+/*     if ( lcd_id == 0 ) { */
+/*         //zero, ili */
+/*         lcd_detected_type = LCD_TYPE_ILI; */
+/*         printf("ILI9341 detected.\n"); */
+/*     } else { */
+/*         // none-zero, ST */
+/*         lcd_detected_type = LCD_TYPE_ST; */
+/*         printf("ST7789V detected.\n"); */
+/*     } */
+
+/* #ifdef CONFIG_LCD_TYPE_AUTO */
+/*     lcd_type = lcd_detected_type; */
+/* #elif defined( CONFIG_LCD_TYPE_ST7789V ) */
+/*     printf("kconfig: force CONFIG_LCD_TYPE_ST7789V.\n"); */
+/*     lcd_type = LCD_TYPE_ST; */
+/* #elif defined( CONFIG_LCD_TYPE_ILI9341 ) */
+/*     printf("kconfig: force CONFIG_LCD_TYPE_ILI9341.\n"); */
+/*     lcd_type = LCD_TYPE_ILI; */
+/* #endif */
+/*     if ( lcd_type == LCD_TYPE_ST ) { */
+/*         printf("LCD ST7789V initialization.\n"); */
+/*         lcd_init_cmds = st_init_cmds; */
+/*     } else { */
+/*         printf("LCD ILI9341 initialization.\n"); */
+/*         lcd_init_cmds = ili_init_cmds; */
+/*     } */
+
+/*     //Send all the commands */
+/*     while (lcd_init_cmds[cmd].databytes!=0xff) { */
+/*         lcd_cmd(spi, lcd_init_cmds[cmd].cmd); */
+/*         lcd_data(spi, lcd_init_cmds[cmd].data, lcd_init_cmds[cmd].databytes&0x1F); */
+/*         if (lcd_init_cmds[cmd].databytes&0x80) { */
+/*             vTaskDelay(100 / portTICK_RATE_MS); */
+/*         } */
+/*         cmd++; */
+/*     } */
+
 }
 
 
@@ -325,7 +586,7 @@ void send_line(int ypos, uint16_t *linedata)
     trans[2].tx_data[0]=0x2B;           //Page address set
     trans[3].tx_data[0]=(ypos+120-window_height/2)>>8;        //Start page high
     trans[3].tx_data[1]=(ypos+120-window_height/2)&0xff;      //start page low
-    trans[3].tx_data[2]=(ypos+120-window_height/2+PARALLEL_LINES)>>8;    //end page high
+    trans[3].tx_data[2]=(ypos+120-window_height/2+PARALLEL_LINES+2)>>8;    //end page high
     trans[3].tx_data[3]=(ypos+120-window_height/2+PARALLEL_LINES)&0xff;  //end page low
     trans[4].tx_data[0]=0x2C;           //memory write
     trans[5].tx_buffer=linedata;        //finally send the line data
@@ -740,13 +1001,14 @@ int main3d();
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include "esp_heap_caps.h"
 
 static void display_pretty_colors(spi_device_handle_t spi)
 {
     uint16_t *lines[2];
     //Allocate memory for the pixel buffers
     for (int i=0; i<2; i++) {
-        lines[i]=malloc(320*PARALLEL_LINES*sizeof(uint16_t));
+      lines[i]=heap_caps_malloc(320*PARALLEL_LINES*sizeof(uint16_t),MALLOC_CAP_DMA);
         assert(lines[i]!=NULL);
     }
     int frame=0;
@@ -774,6 +1036,7 @@ static void display_pretty_colors(spi_device_handle_t spi)
     }
 }
 
+
 void app_main()
 {
     esp_err_t ret;
@@ -787,9 +1050,9 @@ void app_main()
     };
     spi_device_interface_config_t devcfg={
 #ifdef CONFIG_LCD_OVERCLOCK
-        .clock_speed_hz=32*1000*1000,           //Clock out at 40 MHz
+        .clock_speed_hz=40*1000*1000,           //Clock out at 40 MHz
 #else
-        .clock_speed_hz=26*1000*1000,           //Clock out at 26 MHz
+        .clock_speed_hz=40*1000*1000,           //Clock out at 26 MHz
 #endif
         .mode=0,                                //SPI mode 0
         .spics_io_num=PIN_NUM_CS,               //CS pin
@@ -804,6 +1067,16 @@ void app_main()
     ESP_ERROR_CHECK(ret);
     //Initialize the LCD
     lcd_init(spi);
+
+    gpio_set_direction(32, GPIO_MODE_OUTPUT);
+ 
+    gpio_set_level(32,1);
+
+    gpio_set_direction(37, GPIO_MODE_INPUT);
+    gpio_set_direction(38, GPIO_MODE_INPUT);
+    gpio_set_direction(39, GPIO_MODE_INPUT);
+
+    
     /* //Initialize the effect displayed */
     /* ret=pretty_effect_init(); */
     /* ESP_ERROR_CHECK(ret); */
