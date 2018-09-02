@@ -111,7 +111,9 @@ fvector4 operator-(const fvector4 &v1,const fvector4& v2){
   return w;
 }
 
-inline
+
+
+static inline
 fvector3 calc_nv(const fvector4 v[3]){
   fvector3 n;
   fvector4 a,b;

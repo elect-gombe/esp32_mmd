@@ -7,9 +7,7 @@ http://opensource.org/licenses/mit-license.php
 #ifndef __TEXTURE_POLY_H
 #define __TEXTURE_POLY_H
 
-#include "graphiclib.hpp"
 #include "triangle.hpp"
-#include "vector3.hpp"
 #include "fvector2.hpp"
 #include "fvector4.hpp"
 
@@ -18,7 +16,7 @@ http://opensource.org/licenses/mit-license.php
 //テクスチャ型
 struct texture_t{
   const uint16_t *tx;
-  vector2 size;//未実装
+  // vector2 size;//未実装
 };
 
 

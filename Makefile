@@ -4,6 +4,6 @@
 #
 
 PROJECT_NAME := spi_master
-CFLAG = -Ofast --fast-math
+
 include $(IDF_PATH)/make/project.mk
 

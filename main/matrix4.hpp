@@ -10,9 +10,12 @@ http://opensource.org/licenses/mit-license.php
 #include <math.h>
 #include <stdio.h>
 
+#ifndef __MATRIX4_HPP_
+#define __MATRIX4_HPP_
+
 class Matrix4{
-  float m[16];
 public:
+  float m[16];
   Matrix4(){
     for(int i=0;i<16;i++){
       m[i]=0;
@@ -40,7 +43,7 @@ public:
     return m[n];
   }
   
-  
+  void print();
   Matrix4& rotate_x(uint16_t angle){
     /*とりあえず。。。*/
     int sint,cost;
@@ -118,7 +121,7 @@ public:
     return *this;
   }
 
-  fvector3 applyit(fvector3 v){
+  fvector3 mul_fv3(fvector3 v){
     float rw;
     fvector3 av;
     av.x = (v.x)*m[0]+(m[4])*v.y+(v.z)*m[8]+m[12];
@@ -134,7 +137,16 @@ public:
     return av;
   }
 
-  fvector4 applyit_v4(fvector3 v){
+
+  Matrix4 transpose_rotation(){
+    return Matrix4(
+		   m[0],m[4],m[8],0,
+		   m[1],m[5],m[9],0,
+		   m[2],m[6],m[10],0,
+		   0,0,0,1);
+  }
+  
+  fvector4 mul_fv4(fvector3 v){
     float rw;
     fvector4 av;
     av.x = (v.x)*m[0]+(m[4])*v.y+(v.z)*m[8]+m[12];
@@ -150,7 +162,9 @@ public:
 
     return av;
   }
-  
+  fvector3 reversetranslation(void){
+    return fvector3(m[12],m[13],m[14]);
+  }
 };
 
 Matrix4 rotatex(uint16_t ang);
@@ -185,7 +199,39 @@ Matrix4 operator*(const Matrix4& m,const Matrix4& n) {
 
   return r;
 }
+
+static inline
+Matrix4 operator+(const Matrix4& m,const Matrix4& n) {
+  Matrix4 r;
+
+  r= Matrix4(m[0]+n[0],m[1]+n[1],m[2]+n[2],m[3]+n[3],
+	     m[4]+n[4],m[5]+n[5],m[6]+n[6],m[7]+n[7],
+	     m[8]+n[8],m[9]+n[9],m[10]+n[10],m[11]+n[11],
+	     m[12]+n[12],m[13]+n[13],m[14]+n[14],m[15]+n[15]
+	     );
+
+  return r;
+}
+
+static inline
+Matrix4 operator*(const Matrix4& m,const float n) {
+  Matrix4 r;
+
+  r= Matrix4(m[0]*n,m[1]*n,m[2]*n,m[3]*n,
+	     m[4]*n,m[5]*n,m[6]*n,m[7]*n,
+	     m[8]*n,m[9]*n,m[10]*n,m[11]*n,
+	     m[12]*n,m[13]*n,m[14]*n,m[15]*n
+	     );
+
+  return r;
+}
+
+Matrix4 rotation_axis_and_angle(fvector3 axis,float angle);
+Matrix4 rotation_axis_and_cosv(fvector3 u,float cosv);
+
 Matrix4 loadPerspective(float fovy, float aspect,float zNear, float zFar,int width,int height);
 Matrix4 magnify(float n);
 Matrix4 lookat(fvector3 eye,fvector3 goal);
 Matrix4 magnify_y(int n);
+
+#endif

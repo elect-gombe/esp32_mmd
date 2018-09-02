@@ -7,6 +7,7 @@ http://opensource.org/licenses/mit-license.php
 #ifndef __FVECTOR3_H
 #define __FVECTOR3_H
 #include <stdint.h>
+#include <math.h>
 
 inline
 int sqrt2(int f);
@@ -71,7 +72,24 @@ public:
     v.z = -this->z;
     return v;
   }
-  float abs();
+
+
+  float abs(){
+    return sqrtf(x*x+y*y+z*z);
+  }
+
+  float sqabs(){
+    return (x*x+y*y+z*z);
+  }
+
+  fvector3& normalize(){
+    float r = 1.f/abs();
+    x *= r;
+    y *= r;
+    z *= r;
+    return *this;
+  }
+  
   void print();
   fvector3& operator=(const fvector3& v){
     this->x = v.x;

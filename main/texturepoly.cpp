@@ -80,7 +80,7 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
       int mask = 0xFF;
       int cr,cg,cb;
       float bri;
-      float smoke;
+      // float smoke;
       for(int i=sx;i<ex;i++){
 	//各成分の増加計算
 	zv += deltaz;
@@ -96,20 +96,26 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 	  //テクスチャの取得
 	  dtx = tx[65535-
 		   (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
-	  cr = (dtx) >> 11;
-	  cg = ((dtx) >> 5)&0x3F;
-	  cb = (dtx) &0x1F;
-	  // //遠くのに対して黒く補正する。
-	  // smoke = min(1.f-zv,0.2f)*5.f;
-	  bri = col;
-	  // // //色の計算
-	  cr=(cr*bri);
-	  cg=(cg*bri);
-	  cb=(cb*bri);
+	  // cr = (dtx) >> 11;
+	  // cg = ((dtx) >> 5)&0x3F;
+	  // cb = (dtx) &0x1F;
+	  // // //遠くのに対して黒く補正する。
+	  // // smoke = min(1.f-zv,0.2f)*5.f;
+	  // bri = 1.f;
+	  // // // //色の計算
+	  // cr=(cr*bri);
+	  // cg=(cg*bri);
+	  // cb=(cb*bri);
 	  //色の書き込み
-	  ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
-	  ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
-
+	  ((uint8_t*)buff)[i*2] = dtx>>8;
+	  ((uint8_t*)buff)[i*2+1] = dtx;
+// #ifdef ENDIAN_LITTLE
+// 	  ((uint8_t*)buff)[i*2+1] = ((cg<<5)|(cr<<11))>>8;
+// 	  ((uint8_t*)buff)[i*2] = (cb|(cg<<5));
+// #else
+// 	  ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
+// 	  ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
+// #endif
 	  // ((uint8_t*)buff)[i*2] = 0xFF;
 	  // ((uint8_t*)buff)[i*2+1] = 0xFF;
 	}
@@ -263,7 +269,6 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 //   return 0;
 // }
 
-#warning todo add comment
 int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t *tex,const fvector2 puv[3]){
   fvector4 p[3];
   float delta_top_mid;
@@ -279,7 +284,6 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   fvector2 top_btm_uv;
 
   fvector4 t;
-  vector3 cr;
   fvector2 t2;
   fvector2 uv[3];
 

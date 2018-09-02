@@ -5,7 +5,6 @@ This software is released under the MIT License.
 http://opensource.org/licenses/mit-license.php
 */
 #include "matrix4.hpp"
-#include "vector3.hpp"
 
 Matrix4 loadPerspective(float fovy,float aspect,float zNear,float zFar,int width,int height){
   Matrix4 m;
@@ -52,13 +51,14 @@ Matrix4 lookat(fvector3 goal,fvector3 eye){
   return m*translation(-eye);
 }
 
-// void print(Matrix4 m){
-//   for(int i=0;i<16;i++){
-//     std::cout <<std::fixed<< std::setprecision(5)<<m[i]<< ",";
-//     if(i%4==3)std::cout<<std::endl;
-//   }
-//   std::cout<<std::endl;
-// }
+#include <iostream>
+void Matrix4::print(){
+  for(int i=0;i<16;i++){
+    std::cout<<m[i]<< ",";
+    if(i%4==3)std::cout<<std::endl;
+  }
+  std::cout<<std::endl;
+}
 
 float sin16(uint16_t ang){
   return sinf(ang*(2.f*3.14159265359f/65536.f));
@@ -127,3 +127,61 @@ Matrix4 magnify_y(float n){
 		 0,0,0,1.f);
 }
 
+// assert that len of axis must be 1.
+Matrix4 rotation_axis_and_cosv(fvector3 u,float cosv){
+  float s;
+  float c;
+  float oc;//one minus c
+
+  c = cosv;
+  s = sqrt(1-c*c);
+  oc = 1.f-c;
+
+  // return Matrix4(c+u.x*u.x*oc,
+  // 		 u.y*u.x*oc+u.z*s,
+  // 		 u.z*u.x*oc-u.y*s,
+  // 		 0.f,
+
+  // 		 u.x*u.y*oc-u.z*s,
+  // 		 c+u.y*u.y*oc,
+  // 		 u.z*u.y*oc+u.x*s,
+  // 		 0.f,
+
+  // 		 u.x*u.z*oc+u.y*s,
+  // 		 u.y*u.z*oc-u.x*s,
+  // 		 c+u.z*u.z*oc,
+  // 		 0.f,
+		 
+  // 		 0.f,0.f,0.f,1.f);
+		 
+  
+  return Matrix4(c+u.x*u.x*oc,u.x*u.y*oc-u.z*s,u.x*u.z*oc+u.y*s,0.f,
+		 u.y*u.x*oc+u.z*s,c+u.y*u.y*oc,u.y*u.z*oc-u.x*s,0.f,
+		 u.z*u.x*oc-u.y*s,u.z*u.y*oc+u.x*s,c+u.z*u.z*oc,0.f,
+		 0.f,0.f,0.f,1.f);
+		 
+  
+  //TODO
+}
+
+
+
+
+// assert that len of axis must be 1.
+Matrix4 rotation_axis_and_angle(fvector3 u,float angle){
+  float s;
+  float c;
+  float oc;//one minus c
+
+  s = sinf(-angle);
+  c = cosf(-angle);
+  oc = 1.f-c;
+
+  return Matrix4(c+u.x*u.x*oc,u.x*u.y*oc-u.z*s,u.x*u.z*oc+u.y*s,0.f,
+		 u.y*u.x*oc+u.z*s,c+u.y*u.y*oc,u.y*u.z*oc-u.x*s,0.f,
+		 u.z*u.x*oc-u.y*s,u.z*u.y*oc+u.x*s,c+u.z*u.z*oc,0.f,
+		 0.f,0.f,0.f,1.f);
+		 
+  
+  //TODO
+}
