@@ -75,7 +75,7 @@ uint8_t drawidx[POLYNUM];
 #define TRI_MULTI 4
 
 static
-texturetriangle *tri[MAXPROC_POLYNUM/TRI_MULTI];
+texturetriangle *tri[(MAXPROC_POLYNUM+TRI_MULTI-1)/TRI_MULTI];
 
 int draw_y;
 fvector3 veye;
@@ -105,7 +105,7 @@ void calc_vertices(unsigned int begin,unsigned int end){
 void initialize_g_draw_buffer(void){
   for(int i=0;i<window_width*DRAW_NLINES/2;i++){
     ((uint32_t*)g_zbuff)[i]=0xFFFFFFFF;
-    ((uint32_t*)g_drawbuff[lastbuff])[i]=0x10841084;/*RGB*/
+    ((uint32_t*)g_drawbuff[lastbuff])[i]=0x84108410;/*RGB*/
   }
 }
 
@@ -118,7 +118,7 @@ void initialize_draw_buffer(int ps){
 #endif
 }
 
-void generate_polygons(unsigned int split,unsigned int num){
+void generate_polygons_and_draw(unsigned int split,unsigned int num,uint16_t *zbuff,uint16_t *drawbuff){
   int searchidx = MAXPROC_POLYNUM*num/split;
   unsigned mati=0;
   int nextmati=0;
@@ -157,7 +157,9 @@ void generate_polygons(unsigned int split,unsigned int num){
       printf("TOO MUCH FACES IN THIS LINE\n");
       break;
     }
-    if(tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].triangle_set(v,light,&tex,puv)==-1)tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].isexisting = 0;
+    if(tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].triangle_set(v,light,&tex,puv)==-1||
+       tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].draw(zbuff,drawbuff,draw_y*DRAW_NLINES))
+      tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].isexisting = 0;
   }
 }
 
@@ -171,10 +173,9 @@ void draw_polygons(unsigned int split,unsigned int num,uint16_t *zbuff,uint16_t 
   }
 }
 
-extern "C"{
 void *vTask(void* prm){
   fvector3 n;
-  int ps = (int)prm;
+  int ps = (unsigned long long)(prm);
   printf("ps:%d, begin\n",ps);
 #ifndef OMIT_ZBUFFER_CONFLICT
   clientps[ps].drawbuff = new uint16_t[window_width*DRAW_NLINES];
@@ -193,7 +194,7 @@ void *vTask(void* prm){
       break;
 
     case VTASK_POLY_GENERATE:
-      generate_polygons(PROCESSNUM,ps+1);
+      generate_polygons_and_draw(PROCESSNUM,ps+1,g_zbuff,g_drawbuff[lastbuff]);
       clientps[ps].vtaskstate = VTASK_WAIT;
       break;
 
@@ -209,7 +210,6 @@ void *vTask(void* prm){
     }
   }
 }
-};
 
 void barrier_sync(void){
   while(1){
@@ -233,7 +233,6 @@ void merge_screen(void){
   #endif
 }
 
-extern "C"{
 int main3d(void){
   Matrix4 projection;
   Matrix4 obj;
@@ -246,7 +245,7 @@ int main3d(void){
   SDL_Renderer *sdlRenderer;
   
   SDL_CreateWindowAndRenderer(window_width, window_height, SDL_WINDOW_OPENGL, &sdlWindow, &sdlRenderer);
-  sdlTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_TARGET, window_width, window_height);
+  sdlTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_TARGET, window_width, DRAW_NLINES);
 #endif
   bl.init(bones,sizeof(bones)/sizeof(bones[0]),sizeof(mixedbone)/sizeof(mixedbone[0]));
 
@@ -266,7 +265,7 @@ int main3d(void){
   projection=loadPerspective(0.25f,float(window_height)/window_width,0.0001f,30.f,0,0)*projection;
 
   fvector3 viewdir;
-  float dist = 3.f;
+  float dist = 3.f, dd=1.0f;
   fvector2 np = fvector2(150.f,0);
   // float fps = 0.f;
     
@@ -283,16 +282,14 @@ int main3d(void){
     vdb_frame();
 #endif
 
-    // usleep(20000);
 #ifdef USE_SDL
+    // usleep(20000);
     if(SDL_PollEvent(&ev)){
       if(ev.type == SDL_QUIT)	{
 	break;
       }
     }
 #endif
-    // static int cnt;
-    // printf("%d\n",cnt++);
     if(0){
       getchar();
       if(disttarget == 30.f){
@@ -303,7 +300,6 @@ int main3d(void){
 	disttarget = 30.f;
       }
     }
-    // np.x++;
 
     //視点計算
     dist = dist*0.7+disttarget*0.3;// + 1.4f*cosf(np.x/150.f*3.14159265358979324f);
@@ -311,7 +307,7 @@ int main3d(void){
 
     veye = -fvector3(cosf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f),sinf(np.y/300.f*3.14159265f),sinf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f));
     //透視投影行列とカメラ行列の合成
-    m=projection*lookat(fvector3(0,0,0),veye*dist)*obj*translation(trans);
+    m=projection*lookat(fvector3(0,0,0),veye*dist*dd)*obj*translation(trans);
     bl.calcall(m);
 
     //頂点データを変換
@@ -330,33 +326,40 @@ int main3d(void){
     for(draw_y=0;draw_y<window_height/DRAW_NLINES;draw_y++){
       initialize_g_draw_buffer();
 
-      for(int s=0;s<PROCESSNUM-1;s++)clientps[s].vtaskstate = VTASK_POLY_GENERATE;
-      generate_polygons(PROCESSNUM,0);
-      barrier_sync();
-      
       for(int s=0;s<PROCESSNUM-1;s++)clientps[s].vtaskstate = VTASK_POLY_DRAW;
       //描画ステージ
       draw_polygons(PROCESSNUM,0,g_zbuff,g_drawbuff[lastbuff]);
       barrier_sync();
+
+      for(int s=0;s<PROCESSNUM-1;s++)clientps[s].vtaskstate = VTASK_POLY_GENERATE;
+      generate_polygons_and_draw(PROCESSNUM,0,g_zbuff,g_drawbuff[lastbuff]);
+      barrier_sync();
+      
       merge_screen();
 #ifdef USE_SDL
       SDL_UpdateTexture(sdlTexture, NULL, (uint8_t*)g_drawbuff[lastbuff], window_width*2);
-      SDL_RenderClear(sdlRenderer);
-      SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
-      SDL_RenderPresent(sdlRenderer);
+      {
+	SDL_Rect dstrect;
+	dstrect.x = 0;
+	dstrect.y = draw_y*DRAW_NLINES;
+	dstrect.w = window_width;
+	dstrect.h = DRAW_NLINES;
+	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &dstrect);
+      }
 #else
       send_line(draw_y*DRAW_NLINES,(uint8_t*)(g_drawbuff[lastbuff]));
 #endif
       lastbuff = 1-lastbuff;
     }
+#ifdef USE_SDL
+    SDL_RenderPresent(sdlRenderer);
+#endif
 #ifdef VISUALDEBUG
     vdb_end();
 #endif
-    // mtest();
   }
 #ifdef USE_SDL
   SDL_Quit();
 #endif
   return 0;
 }
-};

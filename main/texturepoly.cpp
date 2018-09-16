@@ -107,15 +107,17 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 	  // cg=(cg*bri);
 	  // cb=(cb*bri);
 	  //色の書き込み
+#ifdef ENDIAN_LITTLE
 	  ((uint8_t*)buff)[i*2] = dtx>>8;
 	  ((uint8_t*)buff)[i*2+1] = dtx;
-// #ifdef ENDIAN_LITTLE
 // 	  ((uint8_t*)buff)[i*2+1] = ((cg<<5)|(cr<<11))>>8;
 // 	  ((uint8_t*)buff)[i*2] = (cb|(cg<<5));
-// #else
+#else
+	  ((uint8_t*)buff)[i*2+1] = dtx>>8;
+	  ((uint8_t*)buff)[i*2] = dtx;
 // 	  ((uint8_t*)buff)[i*2] = ((cg<<5)|(cr<<11))>>8;
 // 	  ((uint8_t*)buff)[i*2+1] = (cb|(cg<<5));
-// #endif
+#endif
 	  // ((uint8_t*)buff)[i*2] = 0xFF;
 	  // ((uint8_t*)buff)[i*2+1] = 0xFF;
 	}
