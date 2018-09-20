@@ -11,13 +11,15 @@ http://opensource.org/licenses/mit-license.php
 const static int window_width = 320;
 const static int window_height = 240;
 
-//#define ENDIAN_LITTLE
+#define ENDIAN_LITTLE
+
+//#define DISABLE_ANIMATION
 
 
-//#define ESP32
-#define DRAW_NLINES (20)
+#define DRAW_NLINES (60)
 #define MAXPROC_POLYNUM (300)
-#ifdef ESP32
+
+#ifndef PC
   #define OMIT_ZBUFFER_CONFLICT
 //comment out if U use M5Stack.
   #define ILI9341

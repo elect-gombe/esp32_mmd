@@ -96,6 +96,10 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 	  //テクスチャの取得
 	  dtx = tx[65535-
 		   (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
+
+	  // Checkered pattern
+	  //	  dtx = (((int)(cuv.x/16.f)+(int)(cuv.y/16.f))&1)*65535;
+
 	  // cr = (dtx) >> 11;
 	  // cg = ((dtx) >> 5)&0x3F;
 	  // cb = (dtx) &0x1F;

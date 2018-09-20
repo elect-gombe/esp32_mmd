@@ -74,6 +74,17 @@ public:
     v.w = -this->w;
     return v;
   }
+  void resetperspective(){
+    this->x *= this->w;
+    this->y *= this->w;
+    this->z *= this->w;
+  }
+  void setperspective(){
+    float rw = 1.f/this->w;
+    this->x *= rw;
+    this->y *= rw;
+    this->z *= rw;
+  }
 };
 
 static inline

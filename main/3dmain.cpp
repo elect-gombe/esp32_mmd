@@ -50,6 +50,8 @@ uint16_t *g_zbuff;
 fvector4 poly_transed[POINTNUM];
 Matrix4 m;
 
+#define ZNEAR 0.1f
+
 float loadPower(// const fvector3 &light_pos,
 		const fvector3 &light_n,const fvector4 obj[3]){
   fvector3 light_obj;
@@ -61,7 +63,7 @@ float loadPower(// const fvector3 &light_pos,
   obj_pos.x = obj_pos.x / 3;
   obj_pos.y = obj_pos.y / 3;
   obj_pos.z = obj_pos.z / 3;
-  
+
   n = calc_nv(obj);
   cos_cross = light_n * n;
 
@@ -86,19 +88,19 @@ bonelist bl;
 static inline
 bool unvisible(fvector4 *v){
   if((0 > v[0].x&&0>v[1].x&&0 > v[2].x)||(window_width <= v[0].x&&window_width<=v[1].x&&window_width <= v[2].x))return 1;
-  //簡易1次クリッピング
-  if(v[0].w < 0)return 1;
-  if(v[2].w < 0)return 1;
-  if(v[1].w < 0)return 1;
-  
+
   return culling(v);
 }
 
 void calc_vertices(unsigned int begin,unsigned int end){
   for(unsigned int j=begin;j<end;j++){
     // obj_transed[j] = fvector4(pointvec[j].x,pointvec[j].y,pointvec[j].z);
+#ifdef DISABLE_ANIMATION
+    poly_transed[j] =  m.mul_fv4(fvector3(pointvec[j]));
+#else
     poly_transed[j] =  bl.boneworld[bone_index[j]].mul_fv4(fvector3(pointvec[j]));
-    poly_transed[j].x=poly_transed[j].x*window_width+window_width/2;poly_transed[j].y=poly_transed[j].y*window_height+window_height/2;	
+#endif
+    poly_transed[j].x=poly_transed[j].x*window_width+window_width/2;poly_transed[j].y=poly_transed[j].y*window_height+window_height/2;
   }
 }
 
@@ -118,16 +120,19 @@ void initialize_draw_buffer(int ps){
 #endif
 }
 
+
+
 void generate_polygons_and_draw(unsigned int split,unsigned int num,uint16_t *zbuff,uint16_t *drawbuff){
   int searchidx = MAXPROC_POLYNUM*num/split;
   unsigned mati=0;
   int nextmati=0;
   fvector4 v[3];
+  int zovercount = 0;
 
   if(num)
     initialize_draw_buffer(num-1);
-  nextmati = materiallist[mati].num;  
-  
+  nextmati = materiallist[mati].num;
+
   for(int i=num;i<POLYNUM;i+=split){
     while(i >= nextmati){
       mati ++;
@@ -139,7 +144,13 @@ void generate_polygons_and_draw(unsigned int split,unsigned int num,uint16_t *zb
     }
     if((draw_y*DRAW_NLINES+DRAW_NLINES < v[0].y&&draw_y*DRAW_NLINES+DRAW_NLINES < v[1].y&&draw_y*DRAW_NLINES+DRAW_NLINES < v[2].y))continue;
     drawidx[i] = 1;
-    if(unvisible(v))continue;
+    zovercount = 0;
+    for(int j=0;j<3;j++){
+      if(v[j].w < ZNEAR){
+	zovercount++;
+      }
+    }
+    if(zovercount==0&&unvisible(v))continue;
 
     //光量の計算
     float light = 1.0f;
@@ -148,10 +159,95 @@ void generate_polygons_and_draw(unsigned int split,unsigned int num,uint16_t *zb
       texturelist[materiallist[mati].texture],//vector2(4,4)
     };
     fvector2 puv[3];
+
     for(int j=0;j<3;j++){
       puv[j].x = (1.f-point_uv[polyvec[i][j]].x)*SIZE_TEX;
       puv[j].y = (point_uv[polyvec[i][j]].y)*SIZE_TEX;
     }
+    if(zovercount == 1){
+      fvector2 uv_near;
+      fvector4 v_near;
+      printf("sprit:1");
+      // 1 vertex is too near the camera.
+      // split 2 triangles from 1 triangle.
+
+      // triangle1
+      float t1,t2;
+      int i1,i2,i3;
+      if(v[0].w < ZNEAR){
+	i1 = 0;
+	i2 = 1;
+	i3 = 2;
+      }else if(v[1].w < ZNEAR){
+	i1 = 1;
+	i2 = 0;
+	i3 = 2;
+      }else{
+	i1 = 2;
+	i2 = 0;
+	i3 = 1;
+      }
+      uv_near = puv[i1];
+      v_near = v[i1];
+      v_near.resetperspective();
+      t1 = 1.f-(v[i1].w-ZNEAR)/(v[i1].w-v[i2].w);
+      t2 = 1.f-(v[i1].w-ZNEAR)/(v[i1].w-v[i3].w);
+      printf(",%f,%f\n",t1,t2);
+      v[i2].resetperspective();
+      v[i1] = v_near*t1+v[i2]*(1.f-t1);
+      v[i2].setperspective();
+      v[i1].setperspective();
+      puv[i1] = uv_near*t1+puv[i2]*(1.f-t1);
+
+      while(searchidx < MAXPROC_POLYNUM&&tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].isexisting)searchidx++;
+      if(searchidx == MAXPROC_POLYNUM){
+	printf("TOO MUCH FACES IN THIS LINE\n");
+	break;
+      }
+      if(tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].triangle_set(v,light,&tex,puv)==-1||
+	 tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].draw(zbuff,drawbuff,draw_y*DRAW_NLINES))
+	tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].isexisting = 0;
+
+      //triangle2
+      v[i3].resetperspective();
+      v[i2] = v_near*t2+v[i3]*(1.f-t2);
+      v[i2].setperspective();
+      v[i3].setperspective();
+      puv[i2] = uv_near*t2+puv[i3]*(1.f-t2);
+    }else if(zovercount == 2){
+      printf("sprit:2\n");
+      float t1,t2;
+      int i1,i2,i3;
+      if(v[0].w > ZNEAR){
+	i1 = 0;
+	i2 = 1;
+	i3 = 2;
+      }else if(v[1].w > ZNEAR){
+	i1 = 1;
+	i2 = 0;
+	i3 = 2;
+      }else{
+	i1 = 2;
+	i2 = 0;
+	i3 = 1;
+      }
+      printf("sprit:2\n");
+      t1 = 1.f-(v[i1].w-ZNEAR)/(v[i1].w-v[i2].w);
+      t2 = 1.f-(v[i1].w-ZNEAR)/(v[i1].w-v[i3].w);
+      v[i1].resetperspective();
+      v[i2].resetperspective();
+      v[i3].resetperspective();
+      v[i2] = v[i1]*t1+ v[i2]*(1.f-t1);
+      puv[i2] = puv[i1]*t1+ puv[i2]*(1.f-t1);
+      v[i3] = v[i1]*t2 + v[i3]*(1.f-t2);
+      puv[i3] = puv[i1]*t2+ puv[i3]*(1.f-t2);
+      v[i1].setperspective();
+      v[i2].setperspective();
+      v[i3].setperspective();
+      //      printf("%f,%f",v[i2].w);
+      //      continue
+    }else if(zovercount == 3)continue;//unvisible(behind the camera.)
+
     while(searchidx < MAXPROC_POLYNUM&&tri[searchidx/TRI_MULTI][searchidx%TRI_MULTI].isexisting)searchidx++;
     if(searchidx == MAXPROC_POLYNUM){
       printf("TOO MUCH FACES IN THIS LINE\n");
@@ -238,17 +334,18 @@ int main3d(void){
   Matrix4 obj;
 #ifdef USE_SDL
   SDL_Init(SDL_INIT_VIDEO);
-  
+
   SDL_Window* sdlWindow;
   SDL_Event	ev;
   SDL_Texture *sdlTexture;
   SDL_Renderer *sdlRenderer;
-  
+
   SDL_CreateWindowAndRenderer(window_width, window_height, SDL_WINDOW_OPENGL, &sdlWindow, &sdlRenderer);
   sdlTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_TARGET, window_width, DRAW_NLINES);
 #endif
+#ifndef DISABLE_ANIMATION
   bl.init(bones,sizeof(bones)/sizeof(bones[0]),sizeof(mixedbone)/sizeof(mixedbone[0]));
-
+#endif
   g_drawbuff[0] = new uint16_t[window_width*DRAW_NLINES];
   g_drawbuff[1] = new uint16_t[window_width*DRAW_NLINES];
   g_zbuff = new uint16_t[window_width*DRAW_NLINES];
@@ -262,13 +359,13 @@ int main3d(void){
   }
 
   //透視投影行列
-  projection=loadPerspective(0.25f,float(window_height)/window_width,0.0001f,30.f,0,0)*projection;
+  projection=loadPerspective(0.25f,float(window_height)/window_width,ZNEAR,30.f,0,0)*projection;
 
   fvector3 viewdir;
-  float dist = 3.f, dd=1.0f;
+  float dist = 3.f;
   fvector2 np = fvector2(150.f,0);
   // float fps = 0.f;
-    
+
   fvector3 n;
 
   float disttarget = 30.f;
@@ -283,13 +380,14 @@ int main3d(void){
 #endif
 
 #ifdef USE_SDL
-    // usleep(20000);
+    /* usleep(20000); */
     if(SDL_PollEvent(&ev)){
       if(ev.type == SDL_QUIT)	{
 	break;
       }
     }
 #endif
+    // disttarget -= 0.05f;
     if(0){
       getchar();
       if(disttarget == 30.f){
@@ -307,8 +405,10 @@ int main3d(void){
 
     veye = -fvector3(cosf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f),sinf(np.y/300.f*3.14159265f),sinf(np.x/300.f*3.14159265f)*cosf(np.y/300.f*3.14159265f));
     //透視投影行列とカメラ行列の合成
-    m=projection*lookat(fvector3(0,0,0),veye*dist*dd)*obj*translation(trans);
+    m=projection*lookat(fvector3(0,0,100),veye*dist)*obj*translation(trans);
+#ifndef DISABLE_ANIMATION
     bl.calcall(m);
+#endif
 
     //頂点データを変換
     for(int s=0;s<PROCESSNUM-1;s++)clientps[s].vtaskstate = VTASK_VERTEX_CALCULATION;
@@ -334,7 +434,7 @@ int main3d(void){
       for(int s=0;s<PROCESSNUM-1;s++)clientps[s].vtaskstate = VTASK_POLY_GENERATE;
       generate_polygons_and_draw(PROCESSNUM,0,g_zbuff,g_drawbuff[lastbuff]);
       barrier_sync();
-      
+
       merge_screen();
 #ifdef USE_SDL
       SDL_UpdateTexture(sdlTexture, NULL, (uint8_t*)g_drawbuff[lastbuff], window_width*2);

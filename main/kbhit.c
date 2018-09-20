@@ -1,5 +1,5 @@
 #include "3dconfig.hpp"
-#ifndef ESP32
+#ifdef PC
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>

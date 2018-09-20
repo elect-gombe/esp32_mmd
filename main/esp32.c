@@ -1,7 +1,7 @@
 #include "3dconfig.hpp"
 //disabled by default.
 //uncomment if you want to execute by esp32
-#ifdef ESP32
+#ifndef PC
 /* SPI Master example
    This example code is in the Public Domain (or CC0 licensed, at your option.)
    Unless required by applicable law or agreed to in writing, this
@@ -1071,9 +1071,9 @@ void app_main()
     };
     spi_device_interface_config_t devcfg={
 #ifdef CONFIG_LCD_OVERCLOCK
-        .clock_speed_hz=26*1000*1000,           //Clock out at 40 MHz
+        .clock_speed_hz=40*1000*1000,           //Clock out at 40 MHz
 #else
-        .clock_speed_hz=26*1000*1000,           //Clock out at 26 MHz
+        .clock_speed_hz=40*1000*1000,           //Clock out at 26 MHz
 #endif
         .mode=0,                                //SPI mode 0
         .spics_io_num=PIN_NUM_CS,               //CS pin
