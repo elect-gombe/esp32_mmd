@@ -11,8 +11,6 @@ http://opensource.org/licenses/mit-license.php
 const static int window_width = 320;
 const static int window_height = 240;
 
-#define ENDIAN_LITTLE
-
 //#define DISABLE_ANIMATION
 
 
@@ -20,6 +18,7 @@ const static int window_height = 240;
 #define MAXPROC_POLYNUM (300)
 
 #ifndef PC
+  #define ENDIAN_LITTLE
   #define OMIT_ZBUFFER_CONFLICT
 //comment out if U use M5Stack.
   #define ILI9341
