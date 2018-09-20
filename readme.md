@@ -37,3 +37,12 @@ Other files are distributed under the [MIT License](http://opensource.org/licens
 using scanline rendering. only one line z-buffer, fast drawing and just few memory. So you can increase resolution and get more worse performance! :) 
 
 というか、esp32って340kBのメモリしかない。少なすぎて死にそうになった。アプリケーションかけるように、メモリを節約したいなぁ
+
+## その他、PC上で試すとき（開発用）
+SDL2が必要です。
+
+```sh
+cd ./main/
+g++ *.cpp *.c -lSDL2 -DPC
+./a.out
+```
