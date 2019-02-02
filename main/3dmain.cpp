@@ -47,10 +47,11 @@ struct{
 uint16_t *g_drawbuff[2];
 uint16_t *g_zbuff;
 
-fvector4 poly_transed[POINTNUM];
+fvector4 vertices[POINTNUM];//fvector4 poly_transed[POINTNUM];
 Matrix4 m;
 
-#define ZNEAR 0.1f
+
+#define ZNEAR 1.f
 
 float loadPower(// const fvector3 &light_pos,
 		const fvector3 &light_n,const fvector4 obj[3]){
@@ -93,14 +94,19 @@ bool unvisible(fvector4 *v){
 }
 
 void calc_vertices(unsigned int begin,unsigned int end){
+  fvector4 f;
   for(unsigned int j=begin;j<end;j++){
     // obj_transed[j] = fvector4(pointvec[j].x,pointvec[j].y,pointvec[j].z);
 #ifdef DISABLE_ANIMATION
-    poly_transed[j] =  m.mul_fv4(fvector3(pointvec[j]));
+    f =  m.mul_fv4(fvector3(pointvec[j]));
 #else
-    poly_transed[j] =  bl.boneworld[bone_index[j]].mul_fv4(fvector3(pointvec[j]));
+    f =  bl.boneworld[bone_index[j]].mul_fv4(fvector3(pointvec[j]));
 #endif
-    poly_transed[j].x=poly_transed[j].x*window_width+window_width/2;poly_transed[j].y=poly_transed[j].y*window_height+window_height/2;
+    vertices[j].x=f.x*window_width+window_width/2;
+    vertices[j].y=f.y*window_height+window_height/2;
+    vertices[j].z = f.z;
+    vertices[j].w = f.w;
+    //    poly_transed[j].x=poly_transed[j].x*window_width+window_width/2;poly_transed[j].y=poly_transed[j].y*window_height+window_height/2;
   }
 }
 
@@ -140,7 +146,7 @@ void generate_polygons_and_draw(unsigned int split,unsigned int num,uint16_t *zb
     }
     if(drawidx[i])continue;
     for(int j=0;j<3;j++){
-      v[j] = poly_transed[polyvec[i][j]];
+      v[j] = vertices[polyvec[i][j]];
     }
     if((draw_y*DRAW_NLINES+DRAW_NLINES < v[0].y&&draw_y*DRAW_NLINES+DRAW_NLINES < v[1].y&&draw_y*DRAW_NLINES+DRAW_NLINES < v[2].y))continue;
     drawidx[i] = 1;
@@ -359,7 +365,7 @@ int main3d(void){
   }
 
   //透視投影行列
-  projection=loadPerspective(0.25f,float(window_height)/window_width,ZNEAR,30.f,0,0)*projection;
+  projection=loadPerspective(0.25f,float(window_height)/window_width,ZNEAR,40.f,0,0)*projection;
 
   fvector3 viewdir;
   float dist = 3.f;
@@ -439,20 +445,20 @@ int main3d(void){
 #ifdef USE_SDL
       SDL_UpdateTexture(sdlTexture, NULL, (uint8_t*)g_drawbuff[lastbuff], window_width*2);
       {
-	SDL_Rect dstrect;
-	dstrect.x = 0;
-	dstrect.y = draw_y*DRAW_NLINES;
-	dstrect.w = window_width;
-	dstrect.h = DRAW_NLINES;
-	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &dstrect);
+      	SDL_Rect dstrect;
+      	dstrect.x = 0;
+      	dstrect.y = draw_y*DRAW_NLINES;
+      	dstrect.w = window_width;
+      	dstrect.h = DRAW_NLINES;
+      	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &dstrect);
       }
-#else
+#elif !defined(PC)
       send_line(draw_y*DRAW_NLINES,(uint8_t*)(g_drawbuff[lastbuff]));
 #endif
       lastbuff = 1-lastbuff;
     }
 #ifdef USE_SDL
-    SDL_RenderPresent(sdlRenderer);
+       SDL_RenderPresent(sdlRenderer);
 #endif
 #ifdef VISUALDEBUG
     vdb_end();

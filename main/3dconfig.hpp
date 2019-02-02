@@ -13,11 +13,10 @@ const static int window_height = 240;
 
 //#define DISABLE_ANIMATION
 
-
-#define DRAW_NLINES (60)
+#define DRAW_NLINES (window_height/4)
 #define MAXPROC_POLYNUM (300)
 
-#ifndef PC
+#ifndef PC //for esp32
   #define ENDIAN_LITTLE
   #define OMIT_ZBUFFER_CONFLICT
 //comment out if U use M5Stack.
@@ -25,7 +24,7 @@ const static int window_height = 240;
   #define PROCESSNUM 2
 #else
 //  #define OUTPUTTERMINAL
-  #define USE_SDL
+//  #define USE_SDL
   #define PROCESSNUM 1
 #endif
 

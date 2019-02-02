@@ -143,6 +143,8 @@ fvector3 calc_nv(const fvector4 v[3]){
   return n;
 }
 
+
+
 static inline
 bool culling(fvector4 vertices[]) {
     float P1x = vertices[1].x - vertices[0].x;
@@ -152,7 +154,5 @@ bool culling(fvector4 vertices[]) {
     float OPz = P1x*P2y - P1y*P2x;
     return OPz < 0;
 }
-
-
 
 #endif

@@ -188,6 +188,7 @@ public:
   quaternion_t qt={0,0,0,1};
   
   void calcall(Matrix4 root){
+    static float fps;
     if(begin==-1){
       begin = getMicrotime();
       ptime = begin-1;
@@ -195,9 +196,9 @@ public:
     // for(int i=0;i<num;i++){
     //   listbone[i].settransform(fvector3(),quaternion(qt));
     // }
-
+    fps = 1000000.f/(getMicrotime()-ptime);
     setpose((getMicrotime()-begin)/1000000.f*30.f);
-    printf("%.1f\n",1000000.f/(getMicrotime()-ptime));
+    printf("%.1f\n",fps);
     ptime = getMicrotime();
 
     for(int i=0;i<num;i++){

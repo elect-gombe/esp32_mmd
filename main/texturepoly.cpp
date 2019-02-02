@@ -12,11 +12,11 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
   int sz,ez;
   int zv;
   int deltaz;
-  fvector2 suv,euv;
-  fvector2 uv;
-  fvector2 deltauv;
-  fvector2 cuv;
-  float sw,ew,wv,deltaw;
+  vector2 suv,euv;
+  vector2 uv;
+  vector2 deltauv;
+  int32_t sw,ew,wv,deltaw;
+  int cu,cv;
 
   i=0;
   if(ymin+yno > dry){
@@ -48,19 +48,20 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
     // }
 
     //各成分の増加量の計算
-    float d_x;
+    int d_x;
     if(sx!=ex){
-      d_x = 1.f/(ex-sx);
-      deltaz = (ez-sz)*d_x;
-      deltaw = (ew-sw)*d_x;
-      deltauv = (euv-suv)*d_x;
+      d_x = (1<<30)/(ex-sx);
+      deltaz = (((int64_t)(ez-sz))*d_x)>>30;
+      deltaw = (((int64_t)(ew-sw))*d_x)>>30;
+      deltauv.x = (((int64_t)(euv.x-suv.x))*d_x)>>30;
+      deltauv.y = (((int64_t)(euv.y-suv.y))*d_x)>>30;
     }else{
       deltaz = 0;
       deltaw = 0;
     }
-    zv = sz - (deltaz>>1);
-    wv = sw - deltaw*0.5f;
-    uv = suv - deltauv*0.5f;
+    zv = sz;
+    wv = sw;
+    uv = suv;
 
     //xのクリップ
     if(sx >= window_width)goto distnext;
@@ -78,8 +79,6 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
       //描画処理
       int shift = 8;
       int mask = 0xFF;
-      int cr,cg,cb;
-      float bri;
       // float smoke;
       for(int i=sx;i<ex;i++){
 	//各成分の増加計算
@@ -87,15 +86,16 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 	wv += deltaw;
 	uv += deltauv;
 	//z test
-	if(zv < zlinebuf[i]){
-	  zlinebuf[i] = zv;
+	if((zv>>8) < zlinebuf[i]){
+	  zlinebuf[i] = (zv>>8);
 	  //テクスチャ座標の算出
-	  cuv = uv *(1.f/wv);
+	  cu = (uv.x *((1ULL<<48)/wv)) >> (24+24);
+	  cv = (uv.y *((1ULL<<48)/wv)) >> (24+24);
 	  //ｚデータの書き込み
 	  uint16_t dtx;
 	  //テクスチャの取得
 	  dtx = tx[65535-
-		   (((int)(cuv.x)&mask)+(((int)(cuv.y)&mask)<<shift))];
+		   (((int)(cu)&mask)+(((int)(cv)&mask)<<shift))];
 
 	  // Checkered pattern
 	  //	  dtx = (((int)(cuv.x/16.f)+(int)(cuv.y/16.f))&1)*65535;
@@ -298,15 +298,18 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   phase = 0;
   this->col = col;
 
-  px[0].x = (int)(px[0].x+0.5f);
-  px[0].y = (int)(px[0].y+0.5f);
-  px[1].x = (int)(px[1].x+0.5f);
-  px[1].y = (int)(px[1].y+0.5f);
-  px[2].x = (int)(px[2].x+0.5f);
-  px[2].y = (int)(px[2].y+0.5f);
+  px[0].x = (int)(px[0].x);
+  px[0].y = (int)(px[0].y);
+  px[1].x = (int)(px[1].x);
+  px[1].y = (int)(px[1].y);
+  px[2].x = (int)(px[2].x);
+  px[2].y = (int)(px[2].y);
 
   for(int i=0;i<3;i++){
-    p[i]=px[i];
+    p[i].x=px[i].x;
+    p[i].y=px[i].y;
+    p[i].z=px[i].z;
+    p[i].w=px[i].w;
     p[i].w = 1.f/p[i].w;
     uv[i]=puv[i]*(p[i].w);
   }
@@ -446,53 +449,53 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   if(p[1].x >= split_x){
     pdx[0] = top_mid_x;
     pdx[1] = top_btm_x;
-    pdz[0] = top_mid_z*65536;
-    pdz[1] = top_btm_z*65536;
-    pdw[0] = top_mid_w;
-    pdw[1] = top_btm_w;
-    pdt[0] = top_mid_uv;
-    pdt[1] = top_btm_uv;
+    pdz[0] = top_mid_z*(1<<24);
+    pdz[1] = top_btm_z*(1<<24);
+    pdw[0] = top_mid_w*(1<<24);
+    pdw[1] = top_btm_w*(1<<24);
+    pdt[0] = vector2(top_mid_uv*((float)(1<<24)));
+    pdt[1] = vector2(top_btm_uv*((float)(1<<24)));
     delta[1][0]=delta_top_mid;
     delta[1][1]=delta_top_btm;
     delta[0][0]=delta_mid_btm;
     delta[0][1]=delta_top_btm;
-    zdelta[1][0]=zdelta_top_mid*65536;
-    zdelta[1][1]=zdelta_top_btm*65536;
-    zdelta[0][0]=zdelta_mid_btm*65536;
-    zdelta[0][1]=zdelta_top_btm*65536;
-    wdelta[1][0]=wdelta_top_mid;
-    wdelta[1][1]=wdelta_top_btm;
-    wdelta[0][0]=wdelta_mid_btm;
-    wdelta[0][1]=wdelta_top_btm;
-    uvdelta[1][0]=uvdelta_top_mid;
-    uvdelta[1][1]=uvdelta_top_btm;
-    uvdelta[0][0]=uvdelta_mid_btm;
-    uvdelta[0][1]=uvdelta_top_btm;
+    zdelta[1][0]=zdelta_top_mid*(1<<24);
+    zdelta[1][1]=zdelta_top_btm*(1<<24);
+    zdelta[0][0]=zdelta_mid_btm*(1<<24);
+    zdelta[0][1]=zdelta_top_btm*(1<<24);
+    wdelta[1][0]=wdelta_top_mid*(1<<24);
+    wdelta[1][1]=wdelta_top_btm*(1<<24);
+    wdelta[0][0]=wdelta_mid_btm*(1<<24);
+    wdelta[0][1]=wdelta_top_btm*(1<<24);
+    uvdelta[1][0]=vector2(uvdelta_top_mid*((float)(1<<24)));
+    uvdelta[1][1]=vector2(uvdelta_top_btm*((float)(1<<24)));
+    uvdelta[0][0]=vector2(uvdelta_mid_btm*((float)(1<<24)));
+    uvdelta[0][1]=vector2(uvdelta_top_btm*((float)(1<<24)));
   }else{
     pdx[0] = top_btm_x;
     pdx[1] = top_mid_x;
-    pdz[0] = top_btm_z*65536;
-    pdz[1] = top_mid_z*65536;
-    pdw[0] = top_btm_w;
-    pdw[1] = top_mid_w;
-    pdt[0] = top_btm_uv;
-    pdt[1] = top_mid_uv;
+    pdz[0] = top_btm_z*(1<<24);
+    pdz[1] = top_mid_z*(1<<24);
+    pdw[0] = top_btm_w*(1<<24);
+    pdw[1] = top_mid_w*(1<<24);
+    pdt[0] = vector2(top_btm_uv*((float)(1<<24)));
+    pdt[1] = vector2(top_mid_uv*((float)(1<<24)));
     delta[1][0]=delta_top_btm;
     delta[1][1]=delta_top_mid;
     delta[0][0]=delta_top_btm;
     delta[0][1]=delta_mid_btm;
-    zdelta[1][0]=zdelta_top_btm*65536;
-    zdelta[1][1]=zdelta_top_mid*65536;
-    zdelta[0][0]=zdelta_top_btm*65536;
-    zdelta[0][1]=zdelta_mid_btm*65536;
-    wdelta[1][0]=wdelta_top_btm;
-    wdelta[1][1]=wdelta_top_mid;
-    wdelta[0][0]=wdelta_top_btm;
-    wdelta[0][1]=wdelta_mid_btm;
-    uvdelta[1][0]=uvdelta_top_btm;
-    uvdelta[1][1]=uvdelta_top_mid;
-    uvdelta[0][0]=uvdelta_top_btm;
-    uvdelta[0][1]=uvdelta_mid_btm;
+    zdelta[1][0]=zdelta_top_btm*(1<<24);
+    zdelta[1][1]=zdelta_top_mid*(1<<24);
+    zdelta[0][0]=zdelta_top_btm*(1<<24);
+    zdelta[0][1]=zdelta_mid_btm*(1<<24);
+    wdelta[1][0]=wdelta_top_btm*(1<<24);
+    wdelta[1][1]=wdelta_top_mid*(1<<24);
+    wdelta[0][0]=wdelta_top_btm*(1<<24);
+    wdelta[0][1]=wdelta_mid_btm*(1<<24);
+    uvdelta[1][0]=vector2(uvdelta_top_btm*((float)(1<<24)));
+    uvdelta[1][1]=vector2(uvdelta_top_mid*((float)(1<<24)));
+    uvdelta[0][0]=vector2(uvdelta_top_btm*((float)(1<<24)));
+    uvdelta[0][1]=vector2(uvdelta_mid_btm*((float)(1<<24)));
   }
   ymiddle = p[1].y;
   isexisting = 1;

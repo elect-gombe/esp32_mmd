@@ -46,7 +46,7 @@ spi_device_handle_t spi;
  The LCD needs a bunch of command/argument values to be initialized. They are stored in this struct.
 */
 
-#define CONFIG_LCD_TYPE_ILI9341
+//#define CONFIG_LCD_TYPE_ILI9341
 //#define CONFIG_LCD_OVERCLOCK
 
 
@@ -1071,9 +1071,9 @@ void app_main()
     };
     spi_device_interface_config_t devcfg={
 #ifdef CONFIG_LCD_OVERCLOCK
-        .clock_speed_hz=40*1000*1000,           //Clock out at 40 MHz
+        .clock_speed_hz=48*1000*1000,           //Clock out at 40 MHz
 #else
-        .clock_speed_hz=40*1000*1000,           //Clock out at 26 MHz
+        .clock_speed_hz=48*1000*1000,           //Clock out at 26 MHz
 #endif
         .mode=0,                                //SPI mode 0
         .spics_io_num=PIN_NUM_CS,               //CS pin
